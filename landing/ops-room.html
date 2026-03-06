@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YARUKSAİ — Operasyon Odası</title>
+    <meta name="description" content="YARUKSAİ AI Denetim Terminali — War Room">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="ops-room.css">
+</head>
+
+<body>
+    <!-- ═══ KILL SWITCH OVERLAY ═══ -->
+    <div id="kill-switch" class="kill-switch hidden">
+        <div class="kill-text">İŞLEM REDDEDİLDİ</div>
+        <div class="kill-sub">YETERSİZ MİZAN · σ &lt; 0.30</div>
+    </div>
+
+    <!-- ═══ HEADER ═══ -->
+    <header id="ops-header">
+        <div class="hdr-left">
+            <span class="sys-name">YARUKSAİ</span>
+            <span class="sys-sep">·</span>
+            <span class="sys-label">OPERASYON ODASI</span>
+        </div>
+        <div class="hdr-center" id="sys-bar">
+            <span>SYSTEM_STATUS: <b id="hdr-status">ACTIVE</b></span>
+            <span class="sys-sep">|</span>
+            <span>MIZAN_CAPACITY: <b>100%</b></span>
+            <span class="sys-sep">|</span>
+            <span>UPTIME: <b id="hdr-uptime">—</b></span>
+        </div>
+        <div class="hdr-right">
+            <span id="sys-clock" class="mono"></span>
+        </div>
+    </header>
+
+    <!-- ═══ 3 COLUMN GRID ═══ -->
+    <main id="grid">
+
+        <!-- ─── SOL: TELEMETRİ (6-Stage Pipeline) ─── -->
+        <section id="col-left" class="col">
+            <div class="col-title">📡 TELEMETRİ</div>
+            <div id="timeline">
+                <div class="stage" data-stage="architect">
+                    <div class="stage-line"></div>
+                    <div class="stage-dot"></div>
+                    <div class="stage-body">
+                        <div class="stage-head">
+                            <span class="stage-num">01</span>
+                            <span class="stage-name">MİMAR</span>
+                            <span class="stage-seal"></span>
+                        </div>
+                        <div class="stage-detail mono">Bekleniyor</div>
+                    </div>
+                </div>
+                <div class="stage" data-stage="auditor">
+                    <div class="stage-line"></div>
+                    <div class="stage-dot"></div>
+                    <div class="stage-body">
+                        <div class="stage-head">
+                            <span class="stage-num">02</span>
+                            <span class="stage-name">DENETÇİ</span>
+                            <span class="stage-seal"></span>
+                        </div>
+                        <div class="stage-detail mono">Bekleniyor</div>
+                    </div>
+                </div>
+                <div class="stage" data-stage="mizan">
+                    <div class="stage-line"></div>
+                    <div class="stage-dot"></div>
+                    <div class="stage-body">
+                        <div class="stage-head">
+                            <span class="stage-num">03</span>
+                            <span class="stage-name">MİZAN</span>
+                            <span class="stage-seal"></span>
+                        </div>
+                        <div class="stage-detail mono">Bekleniyor</div>
+                    </div>
+                </div>
+                <div class="stage" data-stage="builder">
+                    <div class="stage-line"></div>
+                    <div class="stage-dot"></div>
+                    <div class="stage-body">
+                        <div class="stage-head">
+                            <span class="stage-num">04</span>
+                            <span class="stage-name">BUILDER</span>
+                            <span class="stage-seal"></span>
+                        </div>
+                        <div class="stage-detail mono">Bekleniyor</div>
+                    </div>
+                </div>
+                <div class="stage" data-stage="post_build_auditor">
+                    <div class="stage-line"></div>
+                    <div class="stage-dot"></div>
+                    <div class="stage-body">
+                        <div class="stage-head">
+                            <span class="stage-num">05</span>
+                            <span class="stage-name">POST-AUDİT</span>
+                            <span class="stage-seal"></span>
+                        </div>
+                        <div class="stage-detail mono">Bekleniyor</div>
+                    </div>
+                </div>
+                <div class="stage" data-stage="final_gate">
+                    <div class="stage-line"></div>
+                    <div class="stage-dot"></div>
+                    <div class="stage-body">
+                        <div class="stage-head">
+                            <span class="stage-num">06</span>
+                            <span class="stage-name">FİNAL GATE</span>
+                            <span class="stage-seal"></span>
+                        </div>
+                        <div class="stage-detail mono">Bekleniyor</div>
+                    </div>
+                </div>
+            </div>
+            <!-- System Log -->
+            <div class="col-title" style="margin-top:16px;">📜 SİSTEM LOGU</div>
+            <div id="log-feed" class="mono"></div>
+        </section>
+
+        <!-- ─── ORTA: HÜKÜM MERKEZİ ─── -->
+        <section id="col-center" class="col">
+            <div class="col-title">⚖️ HÜKÜM MERKEZİ</div>
+
+            <!-- Komut Satırı -->
+            <div id="cmd-area">
+                <div class="cmd-label mono">HEDEF &gt;</div>
+                <textarea id="goal-input" class="mono" placeholder="Proje hedefi gir..." rows="3"></textarea>
+                <button id="btn-run">▶ ÇALIŞTIR</button>
+            </div>
+
+            <!-- Sigma Gauge -->
+            <div id="sigma-block">
+                <div id="sigma-ring-wrap">
+                    <svg viewBox="0 0 200 200" id="sigma-svg">
+                        <circle cx="100" cy="100" r="88" class="ring-bg" />
+                        <circle cx="100" cy="100" r="88" class="ring-fill" id="sigma-fill" />
+                    </svg>
+                    <div class="sigma-center">
+                        <span id="sigma-val" class="mono">—</span>
+                        <span class="sigma-lbl">σ SİGMA</span>
+                    </div>
+                </div>
+                <div id="sigma-verdict">Bekleniyor</div>
+            </div>
+
+            <!-- 7AI Votes -->
+            <div id="votes-grid">
+                <div class="vote" data-agent="TEVHID"><span class="v-name">TEVHİD</span>
+                    <div class="v-bar">
+                        <div class="v-fill"></div>
+                    </div><span class="v-sc mono">—</span>
+                </div>
+                <div class="vote" data-agent="ADALET"><span class="v-name">ADALET</span>
+                    <div class="v-bar">
+                        <div class="v-fill"></div>
+                    </div><span class="v-sc mono">—</span>
+                </div>
+                <div class="vote" data-agent="MERHAMET"><span class="v-name">MERHAMET</span>
+                    <div class="v-bar">
+                        <div class="v-fill"></div>
+                    </div><span class="v-sc mono">—</span>
+                </div>
+                <div class="vote" data-agent="EMANET"><span class="v-name">EMANET</span>
+                    <div class="v-bar">
+                        <div class="v-fill"></div>
+                    </div><span class="v-sc mono">—</span>
+                </div>
+                <div class="vote" data-agent="IHSAN"><span class="v-name">İHSAN</span>
+                    <div class="v-bar">
+                        <div class="v-fill"></div>
+                    </div><span class="v-sc mono">—</span>
+                </div>
+                <div class="vote" data-agent="SIDK"><span class="v-name">SIDK</span>
+                    <div class="v-bar">
+                        <div class="v-fill"></div>
+                    </div><span class="v-sc mono">—</span>
+                </div>
+                <div class="vote" data-agent="MIZAN"><span class="v-name">MİZAN</span>
+                    <div class="v-bar">
+                        <div class="v-fill"></div>
+                    </div><span class="v-sc mono">—</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── SAĞ: KANIT ARŞİVİ ─── -->
+        <section id="col-right" class="col">
+            <div class="col-title">📁 KANIT ARŞİVİ</div>
+            <div id="run-info">
+                <div class="ri-row"><span class="ri-k">Run ID</span><span class="ri-v mono" id="ri-runid">—</span></div>
+                <div class="ri-row"><span class="ri-k">Durum</span><span class="ri-v mono" id="ri-status">—</span></div>
+                <div class="ri-row"><span class="ri-k">Motor</span><span class="ri-v mono" id="ri-engine">—</span></div>
+                <div class="ri-row"><span class="ri-k">LLM</span><span class="ri-v mono" id="ri-llm">—</span></div>
+            </div>
+            <div class="col-title" style="margin-top:12px;">DOSYALAR</div>
+            <div id="artifact-tree"></div>
+            <button id="btn-download" class="btn-download hidden" onclick="downloadZip()">📦 HAKİKAT PAKETİ
+                İNDİR</button>
+            <!-- Raw Data Viewer -->
+            <div class="col-title" style="margin-top:12px;">HAM VERİ</div>
+            <pre id="raw-viewer" class="mono"></pre>
+        </section>
+
+    </main>
+
+    <script src="ops-room.js"></script>
+</body>
+
+</html>
