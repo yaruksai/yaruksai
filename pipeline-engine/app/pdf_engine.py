@@ -691,19 +691,19 @@ def generate_victim_report(report_data: Dict[str, Any]) -> bytes:
 
     # ── 2. HARM DESCRIPTION ──
     elements.append(Paragraph("📝 2. HARM DESCRIPTION", section_style))
-    harm_desc = report_data.get("harm_description", "No description provided.")
-    elements.append(Paragraph(harm_desc[:2000], body_style))
+    harm_desc = report_data.get("harm_description") or "No description provided."
+    elements.append(Paragraph(str(harm_desc)[:2000], body_style))
     elements.append(Spacer(1, 4*mm))
 
     # ── 3. EVIDENCE SUMMARY ──
     elements.append(Paragraph("🔍 3. EVIDENCE SUMMARY", section_style))
-    evidence = report_data.get("evidence_summary", "No evidence provided.")
-    elements.append(Paragraph(evidence[:2000], body_style))
+    evidence = report_data.get("evidence_summary") or "No evidence provided."
+    elements.append(Paragraph(str(evidence)[:2000], body_style))
     elements.append(Spacer(1, 4*mm))
 
     # ── 4. YARUKSAI AUDIT RESULT ──
-    audit = report_data.get("audit_result", {})
-    if audit:
+    audit = report_data.get("audit_result") or {}
+    if audit and isinstance(audit, dict):
         elements.append(Paragraph("⚖️ 4. YARUKSAI INTEGRITY AUDIT", section_style))
         audit_data = [
             ["Metric", "Value"],
@@ -821,13 +821,13 @@ def generate_victim_report(report_data: Dict[str, Any]) -> bytes:
 
     # ── 6. RECOMMENDED ACTIONS ──
     elements.append(Paragraph("🎯 6. RECOMMENDED ACTIONS", section_style))
-    actions = report_data.get("recommended_actions", [
+    actions = report_data.get("recommended_actions") or [
         "File a formal complaint with the AI system provider.",
         "Request full explanation of the AI decision under Art. 13.",
         "Invoke right to human review under Art. 14.",
         "Lodge complaint with national supervisory authority (Art. 72).",
         "Preserve all evidence for potential legal proceedings.",
-    ])
+    ]
     for i, action in enumerate(actions[:8]):
         elements.append(Paragraph(
             f"<b>{i+1}.</b> {action}",
