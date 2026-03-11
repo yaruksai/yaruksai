@@ -20,6 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ─── Source Code ──────────────────────────────────────────────
 COPY src/ ./src/
 COPY app/ ./app/
+COPY mizan_engine/ ./mizan_engine/
+COPY tests/ ./tests/
 
 # ─── Artifacts directory ─────────────────────────────────────
 RUN mkdir -p /app/artifacts

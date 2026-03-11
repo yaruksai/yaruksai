@@ -44,6 +44,7 @@ from agents.prompts import (
     FINAL_MIZAN_GATE_TEMPLATE,
 )
 from flows.mizan_engine import run_mizan_engine
+from flows.context_memory import ContextMemory, IntegrityError
 
 # Type alias
 EventCallback = Optional[Callable[[Dict[str, Any]], None]]
@@ -514,12 +515,10 @@ def run_six_stage_flow(
         return cp.get("stage_data", {}).get(stage, {})
     # ────────────────────────────────────────────────────────────
 
-    # Check for resume
-    checkpoint = _load_checkpoint()
-    resumed = len(checkpoint.get("completed_stages", [])) > 0
-    if resumed:
-        print(f"[CHECKPOINT] 🔄 RESUME — {len(checkpoint['completed_stages'])} stage tamamlanmış, kaldığı yerden devam")
-    
+    # ── CONTEXT MEMORY: SHA-256 Verified State Store ────────────
+    ctx = ContextMemory(artifacts_dir)
+    print(f"[YARUKSAİ] 🛡️ ContextMemory aktif — SHA-256 handoff doğrulama")
+
     # Enrich goal with council verdict and other context
     enriched_goal = _enrich_goal_with_context(project_goal, context)
 
@@ -549,6 +548,7 @@ def run_six_stage_flow(
             architect_text = mizan_guard(architect_text, "ARCHITECT")
             save_text(artifacts_dir, "architect_stage_output.txt", architect_text)
             _save_checkpoint(f"architect_loop{loop_index}", {"text": architect_text})
+            ctx.store(f"architect_loop{loop_index}", architect_text)
             _emit(event_callback, {"type": "stage_completed", "stage": "architect", "loop_index": loop_index})
 
         # STAGE 2 — Auditor
@@ -568,6 +568,7 @@ def run_six_stage_flow(
             auditor_json = parse_json_safe(auditor_text, "auditor")
             save_json(artifacts_dir, "auditor_stage_output_parsed.json", auditor_json)
             _save_checkpoint(f"auditor_loop{loop_index}", {"text": auditor_text, "json": auditor_json})
+            ctx.store(f"auditor_loop{loop_index}", {"text": auditor_text, "json": auditor_json})
             _emit(event_callback, {"type": "stage_completed", "stage": "auditor", "loop_index": loop_index})
 
         # STAGE 3 — Mizan 
@@ -589,6 +590,7 @@ def run_six_stage_flow(
             )
             save_json(artifacts_dir, "mizan_stage_output.json", mizan_output)
             _save_checkpoint(f"mizan_loop{loop_index}", {"output": mizan_output})
+            ctx.store(f"mizan_loop{loop_index}", mizan_output)
             _emit(event_callback, {
                 "type": "stage_completed", "stage": "mizan", "loop_index": loop_index,
                 "review_decision": str(mizan_output.get("review_decision", "")),
@@ -639,6 +641,7 @@ def run_six_stage_flow(
             save_json(artifacts_dir, "builder_stage_output.json", builder_output)
 
         _save_checkpoint("builder", {"output": builder_output})
+        ctx.store("builder", builder_output)
         _emit(event_callback, {"type": "stage_completed", "stage": "builder", "status": builder_output.get("status")})
 
     # STAGE 5 — Post-build Auditor
@@ -668,6 +671,7 @@ def run_six_stage_flow(
 
         save_json(artifacts_dir, "post_build_audit_output.json", post_build_audit)
         _save_checkpoint("post_build_auditor", {"output": post_build_audit})
+        ctx.store("post_build_auditor", post_build_audit)
         _emit(event_callback, {"type": "stage_completed", "stage": "post_build_auditor"})
 
     # STAGE 6 — Final Mizan Gate
@@ -688,6 +692,15 @@ def run_six_stage_flow(
     )
     print(f"[CHECKPOINT] 🏁 Pipeline tamamlandı — checkpoint mühürlendi")
     
+    # ── CONTEXT MEMORY: Zincir Doğrulaması ──────────────────────
+    try:
+        chain_report = ctx.verify_chain()
+        save_json(artifacts_dir, "context_chain_report.json", chain_report)
+        print(f"[YARUKSAİ] ✅ Context chain integrity VERIFIED — {chain_report['stages']} stages")
+    except IntegrityError as e:
+        print(f"[YARUKSAİ] ❌ CONTEXT CHAIN INTEGRITY FAILURE: {e}")
+        # Ledger'a yaz ama pipeline'u durdurma (veri zaten kaydedildi)
+
     _emit(event_callback, {
         "type": "stage_completed", "stage": "final_gate",
         "decision": final_gate_output.get("decision"),

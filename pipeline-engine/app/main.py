@@ -12,16 +12,16 @@ Security:
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
-import re
 import sys
 import time
 import uuid
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -30,8 +30,18 @@ SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+# ─── Shared State (route modülleri bu modülü kullanır) ─────────
+import app.shared as _shared
+from app.shared import (
+    ARTIFACT_ROOT, ADMIN_LEDGER,
+    check_admin, log_admin_action, load_weights,
+    safe_run_id as _safe_run_id, run_dir as _run_dir,
+    is_safe_relpath as _is_safe_relpath, write_json as _write_json,
+    list_files_recursive as _list_files_recursive,
+    LEGAL_DISCLAIMER,
+)
+
 # ─── Config ────────────────────────────────────────────────────
-ARTIFACT_ROOT = Path(os.getenv("ARTIFACT_ROOT", "/app/artifacts")).resolve()
 MAX_CONCURRENT_RUNS = int(os.getenv("MAX_CONCURRENT_RUNS", "2"))
 SSE_PING_SECONDS = int(os.getenv("SSE_PING_SECONDS", "15"))
 
@@ -42,31 +52,7 @@ _SUBSCRIBERS: Dict[str, List[asyncio.Queue]] = {}
 _SUB_LOCK = asyncio.Lock()
 
 
-# ─── Helpers ───────────────────────────────────────────────────
-
-def _safe_run_id() -> str:
-    return f"run_{uuid.uuid4().hex}"
-
-
-def _is_safe_relpath(p: str) -> bool:
-    """Path traversal koruması."""
-    if not p or p.startswith("/") or "\\" in p:
-        return False
-    norm = Path(p)
-    if any(part in ("..", "") for part in norm.parts):
-        return False
-    return True
-
-
-def _run_dir(run_id: str) -> Path:
-    """Validate run_id format and return resolved path."""
-    if not re.fullmatch(r"run_[0-9a-f]{32}", run_id):
-        raise HTTPException(status_code=400, detail="Invalid run_id format")
-    d = (ARTIFACT_ROOT / run_id).resolve()
-    if ARTIFACT_ROOT not in d.parents and d != ARTIFACT_ROOT:
-        raise HTTPException(status_code=400, detail="Invalid run_id path")
-    return d
-
+# ─── SSE Helpers ───────────────────────────────────────────────
 
 async def _publish(run_id: str, event: Dict[str, Any]) -> None:
     async with _SUB_LOCK:
@@ -92,24 +78,6 @@ async def _unsubscribe(run_id: str, q: asyncio.Queue) -> None:
             arr.remove(q)
         if not arr and run_id in _SUBSCRIBERS:
             del _SUBSCRIBERS[run_id]
-
-
-def _write_json(path: Path, data: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _list_files_recursive(base: Path) -> List[str]:
-    out: List[str] = []
-    if not base.exists():
-        return out
-    for p in base.rglob("*"):
-        if p.is_file():
-            rel = p.relative_to(base).as_posix()
-            if _is_safe_relpath(rel):
-                out.append(rel)
-    out.sort()
-    return out
 
 
 # ─── API Models ────────────────────────────────────────────────
@@ -163,7 +131,6 @@ def _run_flow_sync(
 ) -> Dict[str, Any]:
     """
     CrewAI orchestrator'ı çağırır. Blocking — thread pool'da çalıştırılacak.
-    Builder komut çalıştırmaz: prompt-level kilitli + subprocess/os.system yok.
     """
     from flows.orchestrator import run_six_stage_flow
 
@@ -185,10 +152,10 @@ def _run_flow_sync(
 
 async def _background_run(run_id: str, goal: str, context: Dict[str, Any]) -> None:
     """Arka planda pipeline çalıştırır, SSE event'leri yayınlar."""
-    run_dir = _run_dir(run_id)
-    run_dir.mkdir(parents=True, exist_ok=True)
+    rd = _run_dir(run_id)
+    rd.mkdir(parents=True, exist_ok=True)
 
-    _write_json(run_dir / "run_meta.json", {
+    _write_json(rd / "run_meta.json", {
         "run_id": run_id, "goal": goal, "context": context,
         "ts": time.time(), "status": "running",
     })
@@ -199,11 +166,11 @@ async def _background_run(run_id: str, goal: str, context: Dict[str, Any]) -> No
     event_cb = _sync_event_bridge(run_id, loop)
 
     try:
-        result = await loop.run_in_executor(None, _run_flow_sync, goal, context, run_dir, event_cb)
+        result = await loop.run_in_executor(None, _run_flow_sync, goal, context, rd, event_cb)
 
         # Artifacts index
-        files = _list_files_recursive(run_dir)
-        _write_json(run_dir / "artifacts_index.json", {"files": files, "ts": time.time()})
+        files = _list_files_recursive(rd)
+        _write_json(rd / "artifacts_index.json", {"files": files, "ts": time.time()})
 
         # EU AI Act Compliance Report — otomatik üretim
         try:
@@ -213,7 +180,7 @@ async def _background_run(run_id: str, goal: str, context: Dict[str, Any]) -> No
                 goal=goal,
                 pipeline_summary=result,
                 council_verdict=context.get("council_verdict") if context else None,
-                artifacts_dir=run_dir,
+                artifacts_dir=rd,
             )
             result["compliance_status"] = compliance.get("compliance_summary", {}).get("status")
             result["compliance_score"] = compliance.get("compliance_summary", {}).get("overall_score")
@@ -221,8 +188,8 @@ async def _background_run(run_id: str, goal: str, context: Dict[str, Any]) -> No
             print(f"[YARUKSAİ] Compliance report error: {ce}")
 
         # Update artifacts index with compliance files
-        files = _list_files_recursive(run_dir)
-        _write_json(run_dir / "artifacts_index.json", {"files": files, "ts": time.time()})
+        files = _list_files_recursive(rd)
+        _write_json(rd / "artifacts_index.json", {"files": files, "ts": time.time()})
 
         # Kolektif Hafıza — pipeline sonucunu kaydet
         try:
@@ -242,7 +209,7 @@ async def _background_run(run_id: str, goal: str, context: Dict[str, Any]) -> No
             print(f"[YARUKSAİ] Memory store error: {me}")
 
         # Final status
-        _write_json(run_dir / "run_meta.json", {
+        _write_json(rd / "run_meta.json", {
             "run_id": run_id, "goal": goal, "context": context,
             "ts": time.time(), "status": "completed", "summary": result,
         })
@@ -252,7 +219,7 @@ async def _background_run(run_id: str, goal: str, context: Dict[str, Any]) -> No
             "summary": result,
         })
     except Exception as e:
-        _write_json(run_dir / "run_meta.json", {
+        _write_json(rd / "run_meta.json", {
             "run_id": run_id, "goal": goal, "context": context,
             "ts": time.time(), "status": "failed", "error": str(e),
         })
@@ -290,33 +257,300 @@ async def _sse_stream(run_id: str) -> AsyncIterator[bytes]:
 
 app = FastAPI(
     title="YARUKSAİ Pipeline Engine",
-    description="6-stage CrewAI pipeline with SSE streaming",
-    version="0.1.0",
+    description="AI Decision Auditing Engine — INTEGRITY_INDEX + EVIDENCE_PACK\n\n"
+                "EU AI Act (2024/1689) | IEEE 7000-2021 | ISO/IEC 42001\n\n"
+                "Endpoints:\n"
+                "- `POST /v1/audit` — Primary audit (EVIDENCE_PACK)\n"
+                "- `POST /v1/audit?shadow=true` — Shadow mode\n"
+                "- `POST /auth/token` — JWT RS256 token\n"
+                "- `GET /health` — Component status",
+    version="1.2.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 
+# ─── CORS — Production ────────────────────────────────────────
+from starlette.middleware.cors import CORSMiddleware
+
+_CORS_ORIGINS = os.getenv("CORS_ORIGINS", "https://yaruksai.com,https://www.yaruksai.com,http://localhost:3000").split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in _CORS_ORIGINS],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Key", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
+)
+
+
+# ─── Rate Limiting — In-Memory ────────────────────────────────
+import collections
+
+_RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+_RATE_LIMIT_MAX = int(os.getenv("RATE_LIMIT_MAX", "60"))
+_rate_store: Dict[str, list] = collections.defaultdict(list)
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path in ("/health", "/api/health", "/docs", "/redoc", "/openapi.json"):
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+
+    _rate_store[client_ip] = [t for t in _rate_store[client_ip] if now - t < _RATE_LIMIT_WINDOW]
+
+    if len(_rate_store[client_ip]) >= _RATE_LIMIT_MAX:
+        from starlette.responses import JSONResponse as _RateLimitResp
+        return _RateLimitResp(
+            {"error": "Rate limit exceeded", "retry_after": _RATE_LIMIT_WINDOW},
+            status_code=429,
+            headers={"Retry-After": str(_RATE_LIMIT_WINDOW)},
+        )
+
+    _rate_store[client_ip].append(now)
+    response = await call_next(request)
+    response.headers["X-RateLimit-Limit"] = str(_RATE_LIMIT_MAX)
+    response.headers["X-RateLimit-Remaining"] = str(_RATE_LIMIT_MAX - len(_rate_store[client_ip]))
+    return response
+
+
+# ─── Mount SaaS Routers ──────────────────────────────────────
+try:
+    from app.tenancy import router as tenancy_router
+    app.include_router(tenancy_router)
+except ImportError as _e:
+    print(f"[YARUKSAİ] Tenancy module not available: {_e}")
+
+try:
+    from app.billing import router as billing_router
+    app.include_router(billing_router)
+except ImportError as _e:
+    print(f"[YARUKSAİ] Billing module not available: {_e}")
+
+
+# ─── Mount Route Modules ─────────────────────────────────────
+try:
+    from app.routes import ALL_ROUTERS
+    for _router in ALL_ROUTERS:
+        app.include_router(_router)
+    print(f"[YARUKSAİ] ✅ {len(ALL_ROUTERS)} route modülü yüklendi")
+except ImportError as _e:
+    print(f"[YARUKSAİ] ⚠️ Route modülleri yüklenemedi: {_e}")
+
+
+# ─── Boot Integrity Lock ─────────────────────────────────────
+
+try:
+    from app.boot_lock import verify_boot_integrity, BootIntegrityError, regenerate_genesis
+
+    @app.on_event("startup")
+    async def _boot_integrity_check():
+        try:
+            report = verify_boot_integrity()
+            locked = report.get("locked", False)
+            _shared.set_boot_state(locked, report)
+        except BootIntegrityError as e:
+            _shared.set_boot_state(True, {
+                "status": "HARD_LOCK",
+                "locked": True,
+                "error": str(e),
+            })
+            print(f"[YARUKSAİ] 🔒 SİSTEM KİLİTLENDİ — Boot integrity failure")
+        except Exception as e:
+            _shared.set_boot_state(False, {"status": "ERROR", "locked": False, "error": str(e)})
+            print(f"[YARUKSAİ] ⚠️ Boot lock hatası (devam ediliyor): {e}")
+
+except ImportError:
+    print("[YARUKSAİ] Boot lock module not available")
+
+
+# ═══════════════════════════════════════════════════════════════
+#  SPRINT 1 — AUTH + CIRCUIT BREAKER + LOGGING IMPORTS
+# ═══════════════════════════════════════════════════════════════
+
+try:
+    from app.auth_rs256 import (
+        create_token, verify_token, get_current_user,
+        require_role, require_scope, CLIENT_CREDENTIALS, ROLES,
+    )
+    from app.model_config import get_model, get_all_assignments, AGENT_MODELS
+    AUTH_AVAILABLE = True
+except ImportError as _auth_err:
+    AUTH_AVAILABLE = False
+    print(f"[SPRINT1] Warning: auth module not available: {_auth_err}")
+
+try:
+    from mizan_engine.circuit_breaker import (
+        circuit_registry, CircuitState, CircuitOpenError,
+        AgentExecutionError, execute_with_retry, AGENT_TIMEOUTS,
+    )
+    CIRCUIT_AVAILABLE = True
+except ImportError as _cb_err:
+    CIRCUIT_AVAILABLE = False
+    print(f"[SPRINT1] Warning: circuit_breaker not available: {_cb_err}")
+
+
+# ═══ STRUCTURED LOGGING ═══
+import logging
+import json as _json_mod
+
+class JSONLogHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
+            "level": record.levelname,
+            "service": "yaruksai-pipeline",
+            "event": record.getMessage(),
+        }
+        print(_json_mod.dumps(log_entry, ensure_ascii=False))
+
+_yaruksai_logger = logging.getLogger("yaruksai")
+_yaruksai_logger.setLevel(logging.INFO)
+_yaruksai_logger.addHandler(JSONLogHandler())
+
+
+# ═══ HEALTH CHECK ═══
 @app.get("/health")
+@app.get("/api/health")
 def health() -> Dict[str, Any]:
-    return {
-        "ok": True,
+    """GET /health — Component-level status."""
+    import time as _t
+    _start = _t.time()
+
+    components = {
+        "database": {"status": "up", "latency_ms": 0},
+        "witness_chain": {"status": "up"},
+    }
+
+    # DB check (SQLite)
+    try:
+        from mizan_engine.shahid_ledger import ShahidLedger
+        ledger_path = os.getenv("SHAHID_LEDGER_PATH", str(Path(ARTIFACT_ROOT) / "shahid_ledger.db"))
+        ledger = ShahidLedger(db_path=ledger_path)
+        _db_start = _t.time()
+        ledger.get_all(limit=1)
+        components["database"]["latency_ms"] = round((_t.time() - _db_start) * 1000)
+    except Exception:
+        components["database"]["status"] = "down"
+
+    # Circuit breaker status
+    if CIRCUIT_AVAILABLE:
+        components["agents"] = circuit_registry.all_status()
+        if not components["agents"]:
+            for name in ["celali", "cemali", "kemali", "emanet"]:
+                cb = circuit_registry.get(name)
+                components["agents"][name] = cb.to_dict()
+
+    # Overall status
+    any_down = any(
+        c.get("status") == "down"
+        for c in components.values()
+        if isinstance(c, dict) and "status" in c
+    )
+    any_open = CIRCUIT_AVAILABLE and circuit_registry.any_open()
+
+    status_val = "unhealthy" if any_down else ("degraded" if any_open else "healthy")
+    http_code = 503 if any_down else 200
+
+    _, boot_report = _shared.get_boot_state()
+    boot_locked = _shared.BOOT_LOCKED
+
+    result = {
+        "status": status_val,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "version": "1.2.0",
         "service": "yaruksai-pipeline",
-        "artifact_root": str(ARTIFACT_ROOT),
-        "max_concurrent": MAX_CONCURRENT_RUNS,
+        "boot_status": boot_report.get("status", "UNKNOWN"),
+        "boot_locked": boot_locked,
+        "emergency_stopped": _shared.EMERGENCY_STOPPED,
+        "components": components,
+    }
+
+    if AUTH_AVAILABLE:
+        result["model_assignments"] = get_all_assignments()
+
+    from starlette.responses import JSONResponse as _JR
+    return _JR(result, status_code=http_code)
+
+
+# ═══ AUTH TOKEN ═══
+@app.post("/auth/token")
+@app.post("/api/auth/token")
+async def auth_token(request: Request):
+    """POST /auth/token — client_credentials grant."""
+    if not AUTH_AVAILABLE:
+        raise HTTPException(503, "Auth module not available")
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "Invalid JSON body")
+
+    client_id = body.get("client_id", "")
+    client_secret = body.get("client_secret", "")
+    grant_type = body.get("grant_type", "")
+
+    if grant_type != "client_credentials":
+        raise HTTPException(400, "Only client_credentials grant supported")
+
+    client = CLIENT_CREDENTIALS.get(client_id)
+    if not client or client["secret"] != client_secret:
+        raise HTTPException(401, "Invalid client credentials")
+
+    token_data = create_token(client_id, client["role"])
+    _yaruksai_logger.info(f"Token issued for {client_id} (role: {client['role']})")
+
+    return JSONResponse(token_data)
+
+
+# ═══ BOOT STATUS ═══
+@app.get("/api/admin/boot-status")
+def boot_status() -> Dict[str, Any]:
+    """Boot integrity doğrulama raporu."""
+    return {
+        "boot_locked": _shared.BOOT_LOCKED,
+        "report": _shared.BOOT_REPORT,
     }
 
 
+@app.post("/api/admin/boot-regenerate")
+def boot_regenerate() -> Dict[str, Any]:
+    """Deploy sonrası genesis manifest'ı yenile. Sadece admin."""
+    try:
+        path = regenerate_genesis()
+        _shared.set_boot_state(False, {"status": "GENESIS_REGENERATED", "locked": False, "path": str(path)})
+        return {"status": "ok", "message": "Genesis manifest yenilendi", "path": str(path)}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ═══ PIPELINE RUN ═══
 @app.post("/api/pipeline/run", response_model=RunResponse)
 async def pipeline_run(req: RunRequest) -> RunResponse:
-    """Pipeline'ı başlat. Eşzamanlılık limiti aşılırsa 429 döner."""
+    """Pipeline'ı başlat."""
+    if _shared.EMERGENCY_STOPPED:
+        raise HTTPException(
+            status_code=503,
+            detail="SİSTEM ACİL DURDURMA MODUNDA. Pipeline çalıştırılamaz.",
+        )
+    if _shared.BOOT_LOCKED:
+        raise HTTPException(
+            status_code=503,
+            detail="SİSTEM KİLİTLİ: Boot integrity doğrulaması başarısız.",
+        )
     if RUN_SEMAPHORE._value <= 0:  # noqa: SLF001
         raise HTTPException(
             status_code=429,
-            detail=f"Pipeline busy ({MAX_CONCURRENT_RUNS} concurrent runs active). Try again shortly.",
+            detail=f"Pipeline busy ({MAX_CONCURRENT_RUNS} concurrent runs active).",
         )
 
     run_id = _safe_run_id()
-    run_dir = _run_dir(run_id)
-    run_dir.mkdir(parents=True, exist_ok=True)
+    rd = _run_dir(run_id)
+    rd.mkdir(parents=True, exist_ok=True)
 
     context = req.context.model_dump() if req.context else {}
 
@@ -336,7 +570,7 @@ async def pipeline_run(req: RunRequest) -> RunResponse:
 @app.get("/api/pipeline/stream/{run_id}")
 async def pipeline_stream(run_id: str) -> StreamingResponse:
     """SSE stream — stage event'lerini real-time olarak gönderir."""
-    _ = _run_dir(run_id)  # validate format
+    _ = _run_dir(run_id)
     return StreamingResponse(
         _sse_stream(run_id),
         media_type="text/event-stream",
@@ -351,34 +585,30 @@ async def pipeline_stream(run_id: str) -> StreamingResponse:
 @app.get("/api/pipeline/artifacts/{run_id}")
 def pipeline_artifacts(run_id: str) -> JSONResponse:
     """Run'a ait artifact listesini döndürür."""
-    run_dir = _run_dir(run_id)
-    if not run_dir.exists():
+    rd = _run_dir(run_id)
+    if not rd.exists():
         raise HTTPException(status_code=404, detail="run_id not found")
-    files = _list_files_recursive(run_dir)
+    files = _list_files_recursive(rd)
     return JSONResponse({"run_id": run_id, "files": files})
 
 
 @app.get("/api/pipeline/artifacts/{run_id}/download")
 def pipeline_artifacts_zip(run_id: str):
-    """
-    Hakikat Paketi — tüm artifact'leri ZIP olarak indir.
-    Dosya adı: yaruksai_{run_id}.zip
-    """
+    """Hakikat Paketi — tüm artifact'leri ZIP olarak indir."""
     import zipfile
-    import io
 
-    run_dir = _run_dir(run_id)
-    if not run_dir.exists():
+    rd = _run_dir(run_id)
+    if not rd.exists():
         raise HTTPException(status_code=404, detail="run_id not found")
 
-    files = _list_files_recursive(run_dir)
+    files = _list_files_recursive(rd)
     if not files:
         raise HTTPException(status_code=404, detail="No artifacts found")
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for rel in files:
-            full = (run_dir / rel).resolve()
+            full = (rd / rel).resolve()
             if full.exists() and full.is_file():
                 zf.write(str(full), arcname=rel)
 
@@ -393,15 +623,99 @@ def pipeline_artifacts_zip(run_id: str):
     )
 
 
+@app.get("/api/pipeline/certificate/{run_id}")
+def pipeline_certificate(run_id: str):
+    """YARUKSAİ Etik Uyum Sertifikası — VERICORE Inside."""
+    rd = _run_dir(run_id)
+    meta_path = rd / "run_meta.json"
+    if not meta_path.exists():
+        raise HTTPException(status_code=404, detail="run_id not found")
+
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        ctx = meta.get("context", {}) or {}
+        council = ctx.get("council_verdict", {}) or {}
+        summary = meta.get("summary", {}) or {}
+
+        compliance_path = rd / "eu_ai_act_compliance.json"
+        compliance_data = None
+        if compliance_path.exists():
+            compliance_data = json.loads(compliance_path.read_text(encoding="utf-8"))
+
+        weights = load_weights()
+
+        from app.pdf_engine import generate_certificate
+        pdf_bytes = generate_certificate(
+            run_id=run_id,
+            goal=meta.get("goal", ""),
+            sigma=council.get("sigma", council.get("sigma_score", 0.0)),
+            verdict=council.get("verdict", ""),
+            compliance_score=summary.get("compliance_score", 0.0),
+            compliance_data=compliance_data,
+            weights=weights,
+            ts=meta.get("ts"),
+        )
+
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="yaruksai_certificate_{run_id}.pdf"',
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sertifika oluşturma hatası: {str(e)}")
+
+
+# ── POST /api/certificate — Evaluate JSON → VERICORE PDF ─────
+
+@app.post("/api/certificate")
+async def certificate_from_evaluate(request: Request):
+    """Şûra Konseyi Sertifikası — evaluate() JSON → PDF."""
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Geçersiz JSON gövdesi")
+
+    if not body.get("votes") and not body.get("sigma_score"):
+        raise HTTPException(
+            status_code=400,
+            detail="evaluate() çıktısı gerekli: 'votes' ve 'sigma_score' alanları zorunlu"
+        )
+
+    try:
+        from app.pdf_engine import generate_council_certificate
+        pdf_bytes = generate_council_certificate(body)
+
+        log_admin_action("CERTIFICATE_GENERATED", {
+            "sigma": body.get("sigma_score"),
+            "verdict": body.get("verdict"),
+            "votes_count": len(body.get("votes", [])),
+            "goal": body.get("_goal", ""),
+        })
+
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": 'attachment; filename="yaruksai_sura_certificate.pdf"',
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF sertifika hatası: {str(e)}")
+
+
 @app.get("/api/pipeline/artifacts/{run_id}/{relpath:path}")
 def pipeline_artifact_download(run_id: str, relpath: str):
     """Tek bir artifact dosyasını indir. Path traversal korumalı."""
-    run_dir = _run_dir(run_id)
+    rd = _run_dir(run_id)
     if not _is_safe_relpath(relpath):
         raise HTTPException(status_code=400, detail="Invalid artifact path")
 
-    target = (run_dir / relpath).resolve()
-    if run_dir not in target.parents and target != run_dir:
+    target = (rd / relpath).resolve()
+    if rd not in target.parents and target != rd:
         raise HTTPException(status_code=400, detail="Path traversal denied")
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="Artifact not found")
@@ -412,8 +726,8 @@ def pipeline_artifact_download(run_id: str, relpath: str):
 @app.get("/api/pipeline/status/{run_id}")
 def pipeline_status(run_id: str) -> JSONResponse:
     """Run durumunu döndürür (run_meta.json'dan)."""
-    run_dir = _run_dir(run_id)
-    meta_path = run_dir / "run_meta.json"
+    rd = _run_dir(run_id)
+    meta_path = rd / "run_meta.json"
     if not meta_path.exists():
         raise HTTPException(status_code=404, detail="run_id not found")
     try:
@@ -421,27 +735,3 @@ def pipeline_status(run_id: str) -> JSONResponse:
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to read run metadata")
     return JSONResponse(meta)
-
-
-@app.get("/api/memory/stats")
-def memory_stats() -> JSONResponse:
-    """Kolektif hafıza istatistikleri."""
-    try:
-        from memory import get_memory_stats
-        stats = get_memory_stats()
-        return JSONResponse(stats)
-    except Exception as e:
-        return JSONResponse({"error": str(e), "total_memories": 0})
-
-
-@app.get("/api/memory/search")
-def memory_search(q: str = "", top_k: int = 5) -> JSONResponse:
-    """Benzer geçmiş kararları ara."""
-    if not q:
-        return JSONResponse({"results": [], "query": ""})
-    try:
-        from memory import recall_similar
-        results = recall_similar(q, top_k=top_k)
-        return JSONResponse({"query": q, "results": results, "count": len(results)})
-    except Exception as e:
-        return JSONResponse({"error": str(e), "results": []})

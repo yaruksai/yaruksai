@@ -199,6 +199,11 @@ def get_memory_stats(db_path: Optional[Path] = None) -> Dict[str, Any]:
         conn.close()
 
 
+def get_db_path() -> str:
+    """Hafıza DB dosya yolunu döndür."""
+    return str(_DEFAULT_DB_PATH)
+
+
 def format_memories_for_prompt(memories: List[Dict], max_chars: int = 500) -> str:
     """
     Geçmiş kararları ajan prompt'una eklenecek formatta döndür.
