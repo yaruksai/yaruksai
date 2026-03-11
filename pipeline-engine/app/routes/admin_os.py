@@ -13,11 +13,21 @@ from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from app.shared import check_admin, log_admin_action
 
 router = APIRouter(tags=["admin-os"])
+
+# ─── Admin Panel UI ────────────────────────────────────────────
+_ADMIN_HTML = Path(__file__).resolve().parent.parent.parent / "landing" / "admin.html"
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_panel():
+    """Serve the Admin Panel UI."""
+    if _ADMIN_HTML.exists():
+        return HTMLResponse(_ADMIN_HTML.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>Admin panel not found</h1>", status_code=404)
 
 # ─── Admin DB ──────────────────────────────────────────────────
 ADMIN_DB = Path(os.getenv("ADMIN_DB", "/app/data/admin.db"))
