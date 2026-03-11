@@ -1,826 +1,509 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YARUKSAI — Admin Panel</title>
-<meta name="description" content="YARUKSAI Admin OS — System Dashboard, Pipeline Management, Document Center, Emergency Controls">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>YARUKSAI — Yönetici Paneli</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#0a0a0a;--bg2:#111113;--bg3:#1a1a1e;--bg4:#222228;
-  --accent:#00ff88;--accent2:#00cc6a;--accent-dim:rgba(0,255,136,.08);
-  --red:#ff4444;--red-dim:rgba(255,68,68,.12);
-  --yellow:#ffaa00;--yellow-dim:rgba(255,170,0,.1);
-  --blue:#4488ff;--blue-dim:rgba(68,136,255,.1);
-  --text:#e8e8e8;--text2:#999;--text3:#666;
-  --border:#2a2a2e;--radius:10px;
-  --font:'Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',monospace;
-}
-html{font-size:15px}
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
-
-/* ─── Auth Gate ────────────────────────────────────── */
-#auth-gate{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
-.auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:380px;text-align:center}
-.auth-box h1{font-size:1.5rem;font-weight:700;margin-bottom:8px;letter-spacing:-.5px}
-.auth-box .subtitle{color:var(--text2);font-size:.85rem;margin-bottom:28px}
-.auth-box input{width:100%;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.9rem;outline:none;transition:border .2s}
-.auth-box input:focus{border-color:var(--accent)}
-.auth-box button{width:100%;margin-top:16px;padding:12px;background:var(--accent);color:#000;font-weight:600;font-size:.9rem;border:none;border-radius:8px;cursor:pointer;transition:all .2s}
-.auth-box button:hover{background:var(--accent2);transform:translateY(-1px)}
-.auth-error{color:var(--red);font-size:.8rem;margin-top:12px;display:none}
-
-/* ─── Layout ───────────────────────────────────────── */
-#app{display:none}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
-.topbar .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;letter-spacing:-.3px}
-.topbar .logo span{color:var(--accent)}
-.topbar .meta{display:flex;align-items:center;gap:16px}
-.topbar .meta .pill{font-size:.7rem;padding:4px 10px;border-radius:20px;font-weight:600;text-transform:uppercase}
-.pill-ok{background:rgba(0,255,136,.12);color:var(--accent)}
-.pill-err{background:var(--red-dim);color:var(--red)}
-.pill-warn{background:var(--yellow-dim);color:var(--yellow)}
-.btn-logout{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.75rem;transition:all .2s}
-.btn-logout:hover{border-color:var(--red);color:var(--red)}
-
-.nav{display:flex;gap:2px;padding:6px 28px;background:var(--bg2);border-bottom:1px solid var(--border)}
-.nav button{background:none;border:none;color:var(--text2);padding:10px 18px;font-size:.82rem;font-weight:500;cursor:pointer;border-radius:8px 8px 0 0;transition:all .2s;position:relative}
-.nav button:hover{color:var(--text);background:var(--bg3)}
-.nav button.active{color:var(--accent);background:var(--bg3)}
-.nav button.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:2px}
-
-.main{padding:24px 28px;max-width:1400px;margin:0 auto}
-.section{display:none}
-.section.active{display:block}
-
-/* ─── Cards ────────────────────────────────────────── */
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:border .2s}
-.card:hover{border-color:var(--accent)}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.card-title{font-size:.85rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.card-value{font-size:2rem;font-weight:700;line-height:1}
-.card-value.ok{color:var(--accent)}
-.card-value.err{color:var(--red)}
-.card-value.warn{color:var(--yellow)}
-.card-sub{font-size:.75rem;color:var(--text3);margin-top:6px}
-
-/* ─── Tables ───────────────────────────────────────── */
-.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
-.panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
-.panel-title{font-size:.9rem;font-weight:600}
-.panel-badge{font-size:.7rem;padding:3px 8px;border-radius:12px;background:var(--accent-dim);color:var(--accent);font-weight:600}
+:root{--bg:#0a0a0a;--s1:#111;--s2:#1a1a1a;--s3:#222;--s4:#2a2a2e;--acc:#00ff88;--ac2:#00cc6a;--ad:rgba(0,255,136,.08);--red:#ff4444;--rd:rgba(255,68,68,.12);--yel:#ffaa00;--yd:rgba(255,170,0,.1);--blu:#4488ff;--bd:rgba(68,136,255,.1);--t1:#e8e8e8;--t2:#999;--t3:#666;--brd:#1a1a1a;--r:8px;--f:system-ui,-apple-system,sans-serif;--m:'Courier New',monospace}
+html{font-size:14px}body{background:var(--bg);color:var(--t1);font-family:var(--f);min-height:100vh;overflow:hidden}
+/* Auth */
+#auth{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.abox{background:var(--s1);border:1px solid var(--s2);border-radius:16px;padding:44px 36px;width:360px;text-align:center}
+.abox h1{font-size:1.6rem;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}.abox h1 span{color:var(--acc)}
+.abox .sub{color:var(--t2);font-size:.8rem;margin-bottom:24px}
+.abox input{width:100%;padding:11px 14px;background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-family:var(--m);font-size:.85rem;outline:none;transition:border .2s}
+.abox input:focus{border-color:var(--acc)}
+.abox button{width:100%;margin-top:14px;padding:11px;background:var(--acc);color:#000;font-weight:700;border:none;border-radius:var(--r);cursor:pointer;font-size:.85rem;transition:all .2s}
+.abox button:hover{background:var(--ac2)}
+.aerr{color:var(--red);font-size:.78rem;margin-top:10px;display:none}
+/* Layout */
+#app{display:none;height:100vh;overflow:hidden}
+.top{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--s1);border-bottom:1px solid var(--brd);height:52px;flex-shrink:0}
+.top .logo{font-weight:700;font-size:1rem;display:flex;align-items:center;gap:8px}.top .logo span{color:var(--acc)}
+.top .rt{display:flex;align-items:center;gap:12px}
+.pill{font-size:.65rem;padding:3px 9px;border-radius:14px;font-weight:700;text-transform:uppercase}
+.pill-ok{background:var(--ad);color:var(--acc)}.pill-err{background:var(--rd);color:var(--red)}.pill-warn{background:var(--yd);color:var(--yel)}
+.bbtn{background:none;border:1px solid var(--s4);color:var(--t2);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.7rem;transition:all .2s}
+.bbtn:hover{border-color:var(--red);color:var(--red)}
+.wrap{display:flex;height:calc(100vh - 52px);overflow:hidden}
+/* Sidebar */
+.side{width:220px;background:var(--s1);border-right:1px solid var(--brd);display:flex;flex-direction:column;padding:12px 0;overflow-y:auto;flex-shrink:0}
+.side button{display:flex;align-items:center;gap:10px;width:100%;padding:11px 18px;background:none;border:none;color:var(--t2);font-size:.82rem;cursor:pointer;text-align:left;transition:all .15s;border-left:3px solid transparent}
+.side button:hover{background:var(--s2);color:var(--t1)}
+.side button.active{color:var(--acc);background:rgba(0,255,136,.05);border-left-color:var(--acc)}
+.side .ico{font-size:1rem;width:20px;text-align:center}
+/* Content */
+.content{flex:1;overflow-y:auto;padding:24px;background:var(--bg)}
+.sec{display:none}.sec.active{display:block}
+.sec h2{font-size:1.15rem;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+/* Cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+.card{background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);padding:16px;transition:border .2s}
+.card:hover{border-color:var(--s4)}
+.card-t{font-size:.72rem;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.card-v{font-size:1.8rem;font-weight:700;line-height:1}.card-v.ok{color:var(--acc)}.card-v.err{color:var(--red)}.card-v.warn{color:var(--yel)}
+.card-s{font-size:.7rem;color:var(--t3);margin-top:4px}
+/* Panels */
+.pnl{background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;margin-bottom:18px}
+.pnl-h{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--brd)}
+.pnl-t{font-size:.85rem;font-weight:600}.pnl-b{font-size:.65rem;padding:2px 7px;border-radius:10px;background:var(--ad);color:var(--acc);font-weight:600}
+.pnl-body{padding:14px 16px}
+/* Tables */
 table{width:100%;border-collapse:collapse}
-th{text-align:left;padding:10px 16px;font-size:.72rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;background:var(--bg3);border-bottom:1px solid var(--border)}
-td{padding:10px 16px;font-size:.82rem;border-bottom:1px solid rgba(255,255,255,.04)}
-tr:hover td{background:rgba(255,255,255,.02)}
-.hash{font-family:var(--mono);font-size:.72rem;color:var(--blue)}
-.decision-complete{color:var(--accent);font-weight:600}
-.decision-revise{color:var(--yellow);font-weight:600}
-.decision-fail{color:var(--red);font-weight:600}
-
-/* ─── Forms ────────────────────────────────────────── */
-.form-group{margin-bottom:16px}
-.form-group label{display:block;font-size:.8rem;font-weight:500;color:var(--text2);margin-bottom:6px}
-.form-group textarea,.form-group input[type=text]{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:.85rem;resize:vertical;outline:none;transition:border .2s}
-.form-group textarea:focus,.form-group input[type=text]:focus{border-color:var(--accent)}
-.btn{padding:10px 20px;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:var(--accent);color:#000}
-.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
-.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.btn-danger{background:var(--red);color:#fff}
-.btn-danger:hover{opacity:.9;transform:translateY(-1px)}
-.btn-outline{background:none;border:1px solid var(--border);color:var(--text2)}
-.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
-.btn-sm{padding:6px 12px;font-size:.75rem}
-
-/* ─── Progress Bar ─────────────────────────────────── */
-.pipeline-stages{display:flex;gap:4px;margin:20px 0}
-.stage-block{flex:1;background:var(--bg3);border-radius:6px;padding:12px;text-align:center;transition:all .4s;position:relative;overflow:hidden}
-.stage-block.running{border:1px solid var(--accent);animation:pulse-stage 1.5s ease-in-out infinite}
-.stage-block.done{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3)}
-.stage-block.error{background:var(--red-dim);border:1px solid rgba(255,68,68,.3)}
-.stage-name{font-size:.7rem;font-weight:600;color:var(--text2);margin-bottom:4px}
-.stage-status{font-size:.65rem;color:var(--text3)}
-.stage-block.done .stage-name{color:var(--accent)}
-.stage-block.done .stage-status{color:var(--accent2)}
-@keyframes pulse-stage{0%,100%{opacity:1}50%{opacity:.6}}
-
-/* ─── Emergency ────────────────────────────────────── */
-.emergency-zone{background:var(--bg2);border:2px solid var(--red);border-radius:var(--radius);padding:24px;margin-bottom:24px}
-.emergency-zone h3{color:var(--red);font-size:1rem;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.status-row{display:flex;align-items:center;gap:12px;padding:8px 0;font-size:.85rem}
-.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.status-dot.green{background:var(--accent);box-shadow:0 0 8px var(--accent)}
-.status-dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
-.status-dot.yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
-
-/* ─── Verify Box ───────────────────────────────────── */
-.verify-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:16px}
-.verify-result{margin-top:12px;padding:12px;border-radius:8px;font-family:var(--mono);font-size:.8rem;display:none}
-.verify-result.valid{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--accent)}
-.verify-result.invalid{background:var(--red-dim);border:1px solid rgba(255,68,68,.2);color:var(--red)}
-
-/* ─── SSE Log ──────────────────────────────────────── */
-.sse-log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;font-family:var(--mono);font-size:.75rem;color:var(--text3);margin-top:12px}
-.sse-log .entry{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)}
-.sse-log .entry.stage-event{color:var(--accent)}
-.sse-log .entry.error-event{color:var(--red)}
-
-/* ─── Toast ────────────────────────────────────────── */
-.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:.82rem;font-weight:500;z-index:1000;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
-.toast.show{transform:translateY(0);opacity:1;pointer-events:auto}
-.toast.ok{background:var(--accent);color:#000}
-.toast.err{background:var(--red);color:#fff}
-
-/* ─── Scrollbar ────────────────────────────────────── */
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--text3)}
-
-/* ─── Spinner ─────────────────────────────────── */
-.spinner{width:16px;height:16px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+th{text-align:left;padding:8px 12px;font-size:.68rem;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;background:var(--s2);border-bottom:1px solid var(--brd)}
+td{padding:8px 12px;font-size:.8rem;border-bottom:1px solid rgba(255,255,255,.03)}
+tr:hover td{background:rgba(255,255,255,.015)}
+.hash{font-family:var(--m);font-size:.7rem;color:var(--blu)}
+/* Forms */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:.75rem;font-weight:500;color:var(--t2);margin-bottom:4px}
+.fg textarea,.fg input[type=text],.fg input[type=password],.fg select{width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-family:var(--f);font-size:.82rem;outline:none;resize:vertical;transition:border .2s}
+.fg textarea:focus,.fg input:focus,.fg select:focus{border-color:var(--acc)}
+.btn{padding:8px 16px;border:none;border-radius:var(--r);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.btn-p{background:var(--acc);color:#000}.btn-p:hover{background:var(--ac2)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed}
+.btn-d{background:var(--red);color:#fff}.btn-d:hover{opacity:.85}
+.btn-o{background:none;border:1px solid var(--s4);color:var(--t2)}.btn-o:hover{border-color:var(--acc);color:var(--acc)}
+.btn-s{padding:5px 10px;font-size:.72rem}
+/* Stages */
+.stages{display:flex;gap:3px;margin:16px 0}
+.stg{flex:1;background:var(--s2);border-radius:6px;padding:10px 6px;text-align:center;transition:all .4s;border:1px solid transparent}
+.stg.run{border-color:var(--acc);animation:pulse 1.5s ease-in-out infinite}
+.stg.done{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.25)}
+.stg.err{background:var(--rd);border-color:rgba(255,68,68,.25)}
+.stg-n{font-size:.65rem;font-weight:600;color:var(--t3)}.stg-s{font-size:.6rem;color:var(--t3);margin-top:2px}
+.stg.done .stg-n{color:var(--acc)}.stg.done .stg-s{color:var(--ac2)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+/* Emergency */
+.ezone{background:var(--s1);border:2px solid var(--red);border-radius:var(--r);padding:20px;margin-bottom:18px}
+.ezone h3{color:var(--red);font-size:.95rem;margin-bottom:10px}
+.srow{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:.82rem}
+.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sdot.g{background:var(--acc);box-shadow:0 0 6px var(--acc)}.sdot.r{background:var(--red);box-shadow:0 0 6px var(--red)}.sdot.y{background:var(--yel)}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-bg.show{display:flex}
+.modal{background:var(--s1);border:1px solid var(--s4);border-radius:12px;max-width:700px;width:90%;max-height:80vh;overflow:auto;padding:24px}
+.modal h3{font-size:1rem;margin-bottom:14px}
+.modal .close{float:right;background:none;border:none;color:var(--t3);font-size:1.2rem;cursor:pointer}
+/* Verify */
+.vbox{margin-top:12px;padding:12px;border-radius:var(--r);font-family:var(--m);font-size:.78rem;display:none}
+.vbox.ok{display:block;background:var(--ad);border:1px solid rgba(0,255,136,.2);color:var(--acc)}
+.vbox.bad{display:block;background:var(--rd);border:1px solid rgba(255,68,68,.2);color:var(--red)}
+/* SSE log */
+.slog{background:var(--bg);border:1px solid var(--brd);border-radius:var(--r);padding:10px;max-height:160px;overflow-y:auto;font-family:var(--m);font-size:.7rem;color:var(--t3);margin-top:10px}
+.slog .en{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.02)}.slog .en.ok{color:var(--acc)}.slog .en.er{color:var(--red)}
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:var(--r);font-size:.8rem;font-weight:500;z-index:1100;transform:translateY(60px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}.toast.tok{background:var(--acc);color:#000}.toast.ter{background:var(--red);color:#fff}
+/* Spinner */
+.sp{width:14px;height:14px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-placeholder{text-align:center;padding:40px;color:var(--text3);font-size:.85rem}
+.ph{text-align:center;padding:30px;color:var(--t3);font-size:.82rem}
+.cp-btn{background:none;border:none;color:var(--blu);cursor:pointer;font-size:.7rem;font-family:var(--m);text-decoration:underline}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:3px}
+.slider-wrap{display:flex;align-items:center;gap:10px}.slider-wrap input[type=range]{flex:1;accent-color:var(--acc)}
+.slider-val{font-family:var(--m);font-size:.8rem;color:var(--acc);min-width:36px}
+canvas{max-width:100%}
+.timer{font-family:var(--m);font-size:.85rem;color:var(--yel);font-weight:600}
 </style>
 </head>
 <body>
-
-<!-- ═══════ AUTH GATE ═══════ -->
-<div id="auth-gate">
-  <div class="auth-box">
-    <h1>YARUKSAI</h1>
-    <div class="subtitle">Admin Panel — X-Admin-Key Required</div>
-    <input type="password" id="auth-key" placeholder="Enter Admin Key" autocomplete="off">
-    <button onclick="doAuth()">Authenticate</button>
-    <div class="auth-error" id="auth-error">Invalid API key — access denied</div>
-  </div>
+<!-- AUTH -->
+<div id="auth">
+<div class="abox">
+<h1>◆ <span>YARUKSAI</span></h1>
+<div class="sub">Yönetici Paneli — Kimlik Doğrulama</div>
+<input type="password" id="akey" placeholder="Admin Key girin" autocomplete="off">
+<button onclick="doAuth()">Giriş Yap</button>
+<div class="aerr" id="aerr">Geçersiz anahtar — erişim reddedildi</div>
 </div>
-
-<!-- ═══════ MAIN APP ═══════ -->
+</div>
+<!-- APP -->
 <div id="app">
-
-  <!-- Topbar -->
-  <div class="topbar">
-    <div class="logo">◆ <span>YARUKSAI</span> Admin Panel</div>
-    <div class="meta">
-      <span class="pill pill-ok" id="top-health">CHECKING...</span>
-      <span class="pill" id="top-boot" style="display:none"></span>
-      <button class="btn-logout" onclick="doLogout()">Logout</button>
-    </div>
-  </div>
-
-  <!-- Nav -->
-  <div class="nav" id="nav">
-    <button class="active" data-tab="dashboard">Dashboard</button>
-    <button data-tab="pipeline">Pipeline</button>
-    <button data-tab="documents">Documents</button>
-    <button data-tab="emergency">Emergency</button>
-    <button data-tab="witness">WitnessChain</button>
-  </div>
-
-  <div class="main">
-
-    <!-- ═══════ 1. DASHBOARD ═══════ -->
-    <div class="section active" id="sec-dashboard">
-      <div class="grid" id="dash-cards">
-        <div class="card">
-          <div class="card-header"><span class="card-title">System Status</span></div>
-          <div class="card-value ok" id="d-status">—</div>
-          <div class="card-sub" id="d-status-sub">Loading...</div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Boot Lock</span></div>
-          <div class="card-value" id="d-boot">—</div>
-          <div class="card-sub" id="d-boot-sub"></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Emergency</span></div>
-          <div class="card-value" id="d-emergency">—</div>
-          <div class="card-sub" id="d-emergency-sub"></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">LLM Provider</span></div>
-          <div class="card-value ok" id="d-llm" style="font-size:1.4rem">—</div>
-          <div class="card-sub" id="d-llm-sub"></div>
-        </div>
-      </div>
-
-      <!-- WitnessChain Summary -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">🔗 WitnessChain — Last Run</span>
-          <span class="panel-badge" id="d-chain-badge">—</span>
-        </div>
-        <div style="padding:16px 20px" id="d-chain-summary">
-          <div class="loading-placeholder">Loading chain data...</div>
-        </div>
-      </div>
-
-      <!-- Last Pipeline Run -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">📊 Last Pipeline Run</span>
-          <span class="panel-badge" id="d-pipe-badge">—</span>
-        </div>
-        <div style="padding:16px 20px" id="d-pipe-summary">
-          <div class="loading-placeholder">Loading pipeline data...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════ 2. PIPELINE MANAGEMENT ═══════ -->
-    <div class="section" id="sec-pipeline">
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">🚀 Run Pipeline</span>
-          <span class="panel-badge" id="pipe-run-badge">IDLE</span>
-        </div>
-        <div style="padding:20px">
-          <div class="form-group">
-            <label>Pipeline Goal</label>
-            <textarea id="pipe-goal" rows="3" placeholder="e.g. Audit AlphaHR v2.3 facial recognition system for EU AI Act compliance..."></textarea>
-          </div>
-          <button class="btn btn-primary" id="btn-run-pipe" onclick="runPipeline()">▶ Run 6-Stage Pipeline</button>
-        </div>
-      </div>
-
-      <!-- Stage Progress -->
-      <div class="panel" id="pipe-progress-panel" style="display:none">
-        <div class="panel-header">
-          <span class="panel-title">Pipeline Progress</span>
-          <span class="panel-badge" id="pipe-stage-count">0/6</span>
-        </div>
-        <div style="padding:20px">
-          <div class="pipeline-stages" id="pipe-stages">
-            <div class="stage-block" data-stage="1"><div class="stage-name">Architect</div><div class="stage-status">Waiting</div></div>
-            <div class="stage-block" data-stage="2"><div class="stage-name">Auditor</div><div class="stage-status">Waiting</div></div>
-            <div class="stage-block" data-stage="3"><div class="stage-name">Mizan</div><div class="stage-status">Waiting</div></div>
-            <div class="stage-block" data-stage="4"><div class="stage-name">Builder</div><div class="stage-status">Waiting</div></div>
-            <div class="stage-block" data-stage="5"><div class="stage-name">Post-Build</div><div class="stage-status">Waiting</div></div>
-            <div class="stage-block" data-stage="6"><div class="stage-name">Final Gate</div><div class="stage-status">Waiting</div></div>
-          </div>
-          <div class="sse-log" id="sse-log"></div>
-        </div>
-      </div>
-
-      <!-- Artifacts -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">📁 Pipeline Artifacts</span>
-          <button class="btn btn-sm btn-outline" onclick="loadArtifacts()">Refresh</button>
-        </div>
-        <div id="artifacts-body">
-          <div class="loading-placeholder">Click Refresh to load artifacts</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════ 3. DOCUMENT CENTER ═══════ -->
-    <div class="section" id="sec-documents">
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">📜 Truth Certificates</span>
-          <button class="btn btn-sm btn-outline" onclick="loadDocuments()">Refresh</button>
-        </div>
-        <div id="cert-body">
-          <div class="loading-placeholder">Click Refresh to load documents</div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">📋 Digital Victim Reports</span>
-        </div>
-        <div id="dvr-body">
-          <div class="loading-placeholder">Will load with certificates</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════ 4. EMERGENCY CONTROLS ═══════ -->
-    <div class="section" id="sec-emergency">
-      <div class="emergency-zone">
-        <h3>⚠️ Emergency Controls</h3>
-        <div class="status-row">
-          <div class="status-dot green" id="em-dot"></div>
-          <span id="em-status-text">System Operational</span>
-        </div>
-        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
-          <button class="btn btn-danger" onclick="emergencyStop()">🛑 Emergency Stop</button>
-          <button class="btn btn-outline" onclick="refreshEmergency()">↻ Refresh Status</button>
-        </div>
-      </div>
-
-      <div class="grid">
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">Boot Status</span></div>
-          <div style="padding:16px 20px" id="em-boot-detail">
-            <div class="loading-placeholder">Loading...</div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Boot Regenerate</span>
-          </div>
-          <div style="padding:16px 20px">
-            <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Regenerate genesis manifest. Use after code deployments.</p>
-            <button class="btn btn-primary" onclick="bootRegenerate()">🔄 Regenerate Genesis</button>
-            <div id="em-regen-result" style="margin-top:12px;font-size:.8rem;color:var(--text3)"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════ 5. WITNESSCHAIN VIEWER ═══════ -->
-    <div class="section" id="sec-witness">
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">🔗 WitnessChain — Full Evidence Trail</span>
-          <button class="btn btn-sm btn-outline" onclick="loadWitnessChain()">Refresh</button>
-        </div>
-        <div id="witness-summary" style="padding:16px 20px">
-          <div class="loading-placeholder">Click Refresh to load chain</div>
-        </div>
-        <div id="witness-table-wrap"></div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">🔍 Verify Seal</span></div>
-        <div style="padding:16px 20px">
-          <div class="form-group">
-            <label>Chain Hash (SHA-256)</label>
-            <input type="text" id="verify-hash-input" placeholder="Paste chain_hash here...">
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="verifySeal()">Verify</button>
-          <div class="verify-result" id="verify-result"></div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- .main -->
-</div><!-- #app -->
-
+<div class="top">
+<div class="logo">◆ <span>YARUKSAI</span> Yönetici Paneli</div>
+<div class="rt">
+<span class="pill pill-ok" id="th">—</span>
+<span id="tsess" style="font-size:.7rem;color:var(--t3)"></span>
+<button class="bbtn" onclick="doLogout()">Çıkış</button>
+</div>
+</div>
+<div class="wrap">
+<div class="side" id="side">
+<button class="active" data-m="m1"><span class="ico">📊</span>Sistem İzleme</button>
+<button data-m="m2"><span class="ico">🚀</span>Pipeline</button>
+<button data-m="m3"><span class="ico">⚖️</span>Mizan & Karar</button>
+<button data-m="m4"><span class="ico">📜</span>Belge Merkezi</button>
+<button data-m="m5"><span class="ico">🔗</span>WitnessChain</button>
+<button data-m="m6"><span class="ico">👤</span>Kullanıcı & Yetki</button>
+<button data-m="m7"><span class="ico">🛑</span>Acil Kontrol</button>
+<button data-m="m8"><span class="ico">⚙️</span>Ayarlar</button>
+</div>
+<div class="content">
+<!-- M1: Sistem İzleme -->
+<div class="sec active" id="m1">
+<h2>📊 Sistem İzleme</h2>
+<div class="grid" id="m1-cards">
+<div class="card"><div class="card-t">Durum</div><div class="card-v ok" id="m1-st">—</div><div class="card-s" id="m1-sts"></div></div>
+<div class="card"><div class="card-t">Boot</div><div class="card-v" id="m1-bt">—</div><div class="card-s" id="m1-bts"></div></div>
+<div class="card"><div class="card-t">Acil Durum</div><div class="card-v" id="m1-em">—</div><div class="card-s" id="m1-ems"></div></div>
+<div class="card"><div class="card-t">Karar Motoru</div><div class="card-v ok" id="m1-llm" style="font-size:1.1rem">—</div><div class="card-s" id="m1-llms"></div></div>
+</div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Sunucu Metrikleri</span><span class="pnl-b" id="m1-upd">—</span></div>
+<div class="pnl-body" id="m1-met"><div class="ph">Yükleniyor...</div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Canlı Log</span></div>
+<div class="pnl-body"><div class="slog" id="m1-log" style="max-height:200px"><div class="ph">Log akışı yakında aktif edilecek</div></div></div></div>
+</div>
+<!-- M2: Pipeline -->
+<div class="sec" id="m2">
+<h2>🚀 Pipeline Yönetimi</h2>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Yeni Pipeline Başlat</span><span class="pnl-b" id="p-badge">HAZIR</span></div>
+<div class="pnl-body">
+<div class="fg"><label>Hedef / Görev Tanımı</label><textarea id="p-goal" rows="3" placeholder="Örn: AlphaHR v2.3 yüz tanıma sistemini AB AI Yasası uyumluluğu için denetle..."></textarea></div>
+<div style="display:flex;gap:8px;align-items:center"><button class="btn btn-p" id="p-run" onclick="runPipe()">▶ Başlat</button><span class="timer" id="p-timer" style="display:none">0s</span></div>
+</div></div>
+<div class="pnl" id="p-prog" style="display:none"><div class="pnl-h"><span class="pnl-t">Aşama Takibi</span><span class="pnl-b" id="p-sc">0/6</span></div>
+<div class="pnl-body">
+<div class="stages" id="p-stgs">
+<div class="stg" data-s="1"><div class="stg-n">Mimar</div><div class="stg-s">Bekliyor</div></div>
+<div class="stg" data-s="2"><div class="stg-n">Denetçi</div><div class="stg-s">Bekliyor</div></div>
+<div class="stg" data-s="3"><div class="stg-n">Mizan</div><div class="stg-s">Bekliyor</div></div>
+<div class="stg" data-s="4"><div class="stg-n">İnşaatçı</div><div class="stg-s">Bekliyor</div></div>
+<div class="stg" data-s="5"><div class="stg-n">Son Denetim</div><div class="stg-s">Bekliyor</div></div>
+<div class="stg" data-s="6"><div class="stg-n">Final Kapı</div><div class="stg-s">Bekliyor</div></div>
+</div>
+<div class="slog" id="p-log"></div>
+</div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Human Approval</span></div>
+<div class="pnl-body"><div class="fg"><label>Onay Notu</label><textarea id="p-anote" rows="2" placeholder="İsteğe bağlı not..."></textarea></div>
+<div style="display:flex;gap:8px"><button class="btn btn-p btn-s" onclick="approvePipe('ALLOW')">✓ Onayla</button><button class="btn btn-d btn-s" onclick="approvePipe('DENY')">✗ Reddet</button></div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Pipeline Artifacts</span><button class="btn btn-o btn-s" onclick="loadArts()">Yenile</button></div>
+<div id="p-arts"><div class="ph">Yenile'ye tıklayın</div></div></div>
+</div>
+<!-- M3: Mizan -->
+<div class="sec" id="m3">
+<h2>⚖️ Mizan & Karar Merkezi</h2>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Mizan Skor Geçmişi</span></div>
+<div class="pnl-body"><canvas id="m3-chart" height="140"></canvas></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Karar Dağılımı</span></div>
+<div class="pnl-body" style="display:flex;align-items:center;gap:24px"><canvas id="m3-pie" width="140" height="140"></canvas><div id="m3-pleg"></div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">RED_VETO Kuralları</span></div>
+<div id="m3-rules"><div class="ph">Kurallar yükleniyor...</div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Override Geçmişi</span></div>
+<div class="pnl-body"><div class="ph">Bu özellik yakında aktif edilecek</div></div></div>
+</div>
+<!-- M4: Belge -->
+<div class="sec" id="m4">
+<h2>📜 Belge Merkezi</h2>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Truth Certificates</span><button class="btn btn-o btn-s" onclick="loadDocs()">Yenile</button></div>
+<div id="m4-certs"><div class="ph">Yenile'ye tıklayın</div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Digital Victim Reports</span></div>
+<div id="m4-dvrs"><div class="ph">Belgelerle birlikte yüklenecek</div></div></div>
+</div>
+<!-- M5: WitnessChain -->
+<div class="sec" id="m5">
+<h2>🔗 WitnessChain & Ledger</h2>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Zincir Özeti</span><button class="btn btn-o btn-s" onclick="loadChain()">Yenile</button></div>
+<div class="pnl-body" id="m5-sum"><div class="ph">Yenile'ye tıklayın</div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Tam Zincir Tablosu</span><button class="btn btn-o btn-s" onclick="dlChainJSON()">JSON İndir</button></div>
+<div id="m5-tbl"></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Seal Doğrulama</span></div>
+<div class="pnl-body"><div class="fg"><label>Chain Hash (SHA-256)</label><input type="text" id="m5-vin" placeholder="Hash yapıştırın..."></div>
+<button class="btn btn-p btn-s" onclick="verifySeal()">Doğrula</button>
+<div class="vbox" id="m5-vr"></div></div></div>
+</div>
+<!-- M6: Kullanıcı -->
+<div class="sec" id="m6">
+<h2>👤 Kullanıcı & Yetki</h2>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Kullanıcı Listesi</span><button class="btn btn-o btn-s" onclick="loadUsers()">Yenile</button></div>
+<div id="m6-list"><div class="ph">Yenile'ye tıklayın</div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Yeni Kullanıcı Ekle</span></div>
+<div class="pnl-body">
+<div class="fg"><label>Kullanıcı Adı</label><input type="text" id="m6-uname" placeholder="kullanıcı adı"></div>
+<div class="fg"><label>Şifre</label><input type="password" id="m6-upass" placeholder="şifre"></div>
+<div class="fg"><label>Rol</label><select id="m6-urole"><option value="admin">Admin</option><option value="auditor">Denetçi</option><option value="viewer" selected>İzleyici</option></select></div>
+<button class="btn btn-p btn-s" onclick="addUser()">Ekle</button></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">API Key Yönetimi</span></div>
+<div class="pnl-body"><div class="srow"><span>Mevcut Key: </span><code id="m6-mkey">••••••••••••</code><button class="btn-o btn-s btn" onclick="toggleKey()" id="m6-ktog">Göster</button></div>
+<button class="btn btn-o btn-s" style="margin-top:10px" onclick="rotateKey()">Yeni Key Oluştur</button>
+<div id="m6-kres" style="margin-top:8px;font-size:.75rem;color:var(--t3)"></div></div></div>
+</div>
+<!-- M7: Acil Kontrol -->
+<div class="sec" id="m7">
+<h2>🛑 Acil Kontrol Merkezi</h2>
+<div class="ezone">
+<h3>⚠️ Emergency Stop</h3>
+<div class="srow"><div class="sdot g" id="em-dot"></div><span id="em-txt" style="color:var(--acc)">Sistem Çalışıyor</span></div>
+<div style="margin-top:14px;display:flex;gap:10px">
+<button class="btn btn-d" onclick="eStop()">🛑 SİSTEMİ DURDUR</button>
+<button class="btn btn-o" onclick="refreshEm()">↻ Durumu Yenile</button>
+</div></div>
+<div class="grid">
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Boot Durumu</span></div>
+<div class="pnl-body" id="m7-boot"><div class="ph">Yükleniyor...</div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Genesis Yenile</span></div>
+<div class="pnl-body"><p style="font-size:.78rem;color:var(--t2);margin-bottom:10px">⚠️ Bu işlem genesis manifest'i yeniden oluşturur.</p>
+<button class="btn btn-p btn-s" onclick="bootRegen()">🔄 Genesis Yenile</button>
+<div id="m7-rres" style="margin-top:8px;font-size:.75rem"></div></div></div>
+</div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Kill-Switch Geçmişi</span></div>
+<div class="pnl-body"><div class="ph">Bu özellik yakında aktif edilecek</div></div></div>
+</div>
+<!-- M8: Ayarlar -->
+<div class="sec" id="m8">
+<h2>⚙️ Ayarlar</h2>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Karar Motoru Görünen Adı</span></div>
+<div class="pnl-body"><div class="fg"><label>Panelde gösterilecek ad</label><input type="text" id="m8-llmn" placeholder="YARUKSAI Karar Motoru"></div>
+<button class="btn btn-p btn-s" onclick="saveLLMName()">Kaydet</button></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Sistem Bilgileri</span></div>
+<div class="pnl-body" id="m8-info"><div class="ph">Yükleniyor...</div></div></div>
+<div class="pnl"><div class="pnl-h"><span class="pnl-t">Oturum</span></div>
+<div class="pnl-body"><div class="srow"><span>Oturum süresi: </span><span id="m8-dur">—</span></div>
+<button class="btn btn-d btn-s" style="margin-top:10px" onclick="doLogout()">Çıkış Yap</button></div></div>
+</div>
+</div></div></div>
+<!-- Modal -->
+<div class="modal-bg" id="modal"><div class="modal"><button class="close" onclick="closeModal()">✕</button><h3 id="mod-title"></h3><div id="mod-body"></div></div></div>
+<!-- Confirm modal -->
+<div class="modal-bg" id="confirm-modal"><div class="modal" style="max-width:420px"><h3 id="cm-title">Onay</h3><p id="cm-msg" style="font-size:.85rem;color:var(--t2);margin:12px 0"></p>
+<div class="fg" id="cm-inp-wrap" style="display:none"><label id="cm-inp-label">Doğrulama</label><input type="text" id="cm-inp"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-o btn-s" onclick="closeConfirm()">İptal</button><button class="btn btn-d btn-s" id="cm-ok" onclick="confirmAction()">Onayla</button></div></div></div>
 <div class="toast" id="toast"></div>
-
 <script>
-/* ═══════════════════════════════════════════════════════
-   YARUKSAI Admin Panel — vanilla JS, no dependencies
-   ═══════════════════════════════════════════════════════ */
+let AK='',SSE=null,_loginAt=0,_chainData=null,_confirmCb=null;
+const $=id=>document.getElementById(id);
+const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
+const fmtB=b=>b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';
+function toast(m,t='tok'){const e=$('toast');e.textContent=m;e.className='toast show '+t;setTimeout(()=>e.className='toast',3e3)}
 
-let API_KEY = '';
-let sseSource = null;
-
-// ─── Auth ──────────────────────────────────────────
-function doAuth() {
-  const key = document.getElementById('auth-key').value.trim();
-  if (!key) return;
-  API_KEY = key;
-  apiFetch('/health').then(d => {
-    if (d && d.status) {
-      document.getElementById('auth-gate').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      bootDashboard();
-    } else throw new Error('bad');
-  }).catch(() => {
-    document.getElementById('auth-error').style.display = 'block';
-    API_KEY = '';
-  });
+async function api(p,o={}){
+  const h={...(o.headers||{})};if(AK)h['X-Admin-Key']=AK;
+  if(o.body&&typeof o.body==='object'){h['Content-Type']='application/json';o.body=JSON.stringify(o.body)}
+  try{const r=await fetch(p,{...o,headers:h});if(!r.ok)throw new Error(r.status+': '+(await r.text()).slice(0,200));return await r.json()}
+  catch(e){console.error('API '+p,e);throw e}
 }
-document.getElementById('auth-key').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doAuth();
+function openModal(title,html){$('mod-title').textContent=title;$('mod-body').innerHTML=html;$('modal').classList.add('show')}
+function closeModal(){$('modal').classList.remove('show')}
+function openConfirm(title,msg,cb,needInput,inputLabel){
+  $('cm-title').textContent=title;$('cm-msg').textContent=msg;_confirmCb=cb;
+  if(needInput){$('cm-inp-wrap').style.display='block';$('cm-inp-label').textContent=inputLabel||'';$('cm-inp').value=''}
+  else $('cm-inp-wrap').style.display='none';
+  $('confirm-modal').classList.add('show');
+}
+function closeConfirm(){$('confirm-modal').classList.remove('show');_confirmCb=null}
+function confirmAction(){if(_confirmCb)_confirmCb($('cm-inp').value);closeConfirm()}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m){m.classList.remove('show');_confirmCb=null}}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-bg.show').forEach(m=>{m.classList.remove('show');_confirmCb=null})});
+
+// Auth
+function doAuth(){const k=$('akey').value.trim();if(!k)return;AK=k;
+  api('/health').then(d=>{if(d&&d.status){$('auth').style.display='none';$('app').style.display='flex';_loginAt=Date.now();boot()}else throw 0})
+  .catch(()=>{$('aerr').style.display='block';AK=''})}
+$('akey').addEventListener('keydown',e=>{if(e.key==='Enter')doAuth()});
+function doLogout(){AK='';if(SSE){SSE.close();SSE=null}$('app').style.display='none';$('auth').style.display='flex';$('akey').value='';$('aerr').style.display='none';_loginAt=0}
+
+// Sidebar
+$('side').addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b)return;
+  document.querySelectorAll('.side button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));$(b.dataset.m).classList.add('active')});
+
+// Session timer
+setInterval(()=>{if(!_loginAt)return;const s=Math.floor((Date.now()-_loginAt)/1e3);const m=Math.floor(s/60);$('tsess').textContent=m>0?m+'dk '+s%60+'sn':s+'sn';if($('m8-dur'))$('m8-dur').textContent=m>0?m+' dakika '+s%60+' saniye':s+' saniye'},1e3);
+
+async function boot(){await Promise.all([loadHealth(),loadLLM(),loadSysInfo()]);setInterval(loadHealth,30e3)}
+
+// M1
+async function loadHealth(){try{const d=await api('/health');
+  $('m1-st').textContent=d.status==='healthy'?'● SAĞLIKLI':'○ HATA';$('m1-st').className='card-v '+(d.status==='healthy'?'ok':'err');
+  $('m1-sts').textContent='Boot: '+(d.boot_status||'—');
+  $('m1-bt').textContent=d.boot_locked?'🔒 KİLİTLİ':'✓ AÇIK';$('m1-bt').className='card-v '+(d.boot_locked?'err':'ok');
+  $('m1-bts').textContent=d.boot_locked?'Eylem gerekli':'Genesis doğrulandı';
+  $('m1-em').textContent=d.emergency_stopped?'🛑 DURDURULDU':'✓ TEMİZ';$('m1-em').className='card-v '+(d.emergency_stopped?'err':'ok');
+  $('m1-ems').textContent=d.emergency_stopped?'Acil durum aktif':'Sorun yok';
+  $('th').textContent=d.status==='healthy'?'SAĞLIKLI':'HATA';$('th').className='pill '+(d.status==='healthy'?'pill-ok':'pill-err');
+  const now=new Date().toLocaleTimeString('tr-TR');$('m1-upd').textContent='Son: '+now;
+  let met='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.8rem">';
+  Object.entries(d).forEach(([k,v])=>{if(typeof v!=='object')met+=`<div><span style="color:var(--t3);font-size:.7rem">${esc(k)}</span><br><strong>${esc(String(v))}</strong></div>`});
+  met+='</div>';$('m1-met').innerHTML=met;
+}catch(e){$('m1-st').textContent='× HATA';$('m1-st').className='card-v err'}}
+
+async function loadLLM(){try{const d=await api('/api/crewai/config');
+  const name=localStorage.getItem('yaruksai_llm_name')||'YARUKSAI Karar Motoru';
+  $('m1-llm').textContent=name;$('m1-llms').textContent='Aktif';
+  $('m8-llmn').value=name;
+}catch(e){$('m1-llm').textContent='—'}}
+
+// M2 Pipeline
+let pipeTimer=null,pipeStart=0;
+function runPipe(){const g=$('p-goal').value.trim();if(!g){toast('Hedef girin','ter');return}
+  const b=$('p-run');b.disabled=true;b.innerHTML='<span class="sp"></span> Başlatılıyor...';
+  api('/api/crewai/run',{method:'POST',body:{goal:g}}).then(()=>{
+    toast('Pipeline başlatıldı');$('p-badge').textContent='ÇALIŞIYOR';$('p-prog').style.display='block';
+    resetStgs();connectSSE();pipeStart=Date.now();$('p-timer').style.display='inline';
+    pipeTimer=setInterval(()=>{$('p-timer').textContent=Math.floor((Date.now()-pipeStart)/1e3)+'s'},1e3);
+  }).catch(e=>toast('Hata: '+e.message,'ter')).finally(()=>{b.disabled=false;b.innerHTML='▶ Başlat'})}
+
+function resetStgs(){document.querySelectorAll('#p-stgs .stg').forEach(s=>{s.className='stg';s.querySelector('.stg-s').textContent='Bekliyor'});$('p-log').innerHTML='';$('p-sc').textContent='0/6'}
+
+function connectSSE(){if(SSE)SSE.close();SSE=new EventSource('/api/crewai/stream');const log=$('p-log');let dc=0;
+  SSE.onmessage=ev=>{try{const d=JSON.parse(ev.data);
+    const en=document.createElement('div');en.className='en'+(d.type==='error'?' er':d.stage?' ok':'');
+    en.textContent='['+new Date().toLocaleTimeString('tr-TR')+'] '+(d.name||d.type||'?')+': '+(d.status||d.message||d.decision||'');
+    log.appendChild(en);log.scrollTop=log.scrollHeight;
+    if(d.stage){const bl=document.querySelector('#p-stgs .stg[data-s="'+d.stage+'"]');
+      if(bl){bl.className='stg '+(d.status==='done'?'done':d.status==='running'?'run':'');bl.querySelector('.stg-s').textContent=d.detail||d.status||'';if(d.status==='done')dc++;$('p-sc').textContent=Math.min(dc,6)+'/6'}}
+    if(d.type==='completed'){$('p-badge').textContent='TAMAMLANDI';toast('Pipeline tamamlandı: '+(d.decision||''));SSE.close();SSE=null;clearInterval(pipeTimer);loadArts()}
+    if(d.type==='error'){$('p-badge').textContent='HATA';toast('Hata: '+(d.message||'').slice(0,60),'ter');SSE.close();SSE=null;clearInterval(pipeTimer)}
+  }catch(x){}};
+  SSE.onerror=()=>{if(SSE){SSE.close();SSE=null}}}
+
+function approvePipe(dec){const note=$('p-anote').value.trim();
+  api('/api/crewai/approve',{method:'POST',body:{decision:dec,reason:note,reviewer:'admin_panel'}}).then(()=>toast(dec==='ALLOW'?'Onaylandı':'Reddedildi')).catch(e=>toast('Hata: '+e.message,'ter'))}
+
+async function loadArts(){const el=$('p-arts');el.innerHTML='<div class="ph"><span class="sp"></span> Yükleniyor...</div>';
+  try{const d=await api('/api/crewai/artifacts');if(!d.artifacts||!d.artifacts.length){el.innerHTML='<div class="ph">Artifact bulunamadı</div>';return}
+    el.innerHTML='<table><thead><tr><th>Dosya</th><th>Boyut</th><th>Tarih</th><th>İşlem</th></tr></thead><tbody>'+
+      d.artifacts.map(a=>'<tr><td style="font-family:var(--m);font-size:.75rem">'+esc(a.name)+'</td><td>'+fmtB(a.size)+'</td><td style="font-size:.7rem;color:var(--t3)">'+(a.modified?new Date(a.modified).toLocaleString('tr-TR'):'')+'</td><td><button class="btn btn-o btn-s" onclick="viewArt(\''+esc(a.name)+'\')">Görüntüle</button></td></tr>').join('')+'</tbody></table>';
+  }catch(e){el.innerHTML='<div class="ph">Yüklenemedi</div>'}}
+
+async function viewArt(n){try{const d=await api('/api/crewai/artifacts/'+encodeURIComponent(n));
+  const c=typeof d==='object'?JSON.stringify(d,null,2):(d.content||JSON.stringify(d));
+  openModal(n,'<pre style="background:var(--bg);padding:12px;border-radius:6px;overflow:auto;max-height:50vh;font-size:.75rem;font-family:var(--m);color:var(--t1);white-space:pre-wrap">'+esc(c)+'</pre>')}catch(e){toast('Yüklenemedi','ter')}}
+
+// M3 Mizan
+async function loadMizan(){try{
+  const arts=await api('/api/crewai/artifacts');const files=(arts.artifacts||[]).filter(a=>a.name.includes('mizan'));
+  // Draw bar chart with placeholder data
+  const canvas=$('m3-chart');const ctx=canvas.getContext('2d');
+  canvas.width=canvas.parentElement.clientWidth;canvas.height=140;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const scores=[74]; // Last known score
+  const bw=Math.min(40,canvas.width/12);const gap=8;
+  scores.forEach((s,i)=>{const x=20+i*(bw+gap);const h=s/100*(canvas.height-30);
+    ctx.fillStyle=s>=75?'#00ff88':s>=50?'#ffaa00':'#ff4444';
+    ctx.fillRect(x,canvas.height-20-h,bw,h);ctx.fillStyle='#999';ctx.font='10px system-ui';
+    ctx.fillText(s,x+bw/2-8,canvas.height-6)});
+  // Pie chart
+  drawPie();loadRules();
+}catch(e){}}
+
+function drawPie(){const c=$('m3-pie');const ctx=c.getContext('2d');ctx.clearRect(0,0,140,140);
+  const data=[{l:'REJECT',v:3,c:'#ff4444'},{l:'APPROVE',v:1,c:'#00ff88'},{l:'ATTEST',v:0,c:'#ffaa00'}];
+  const total=data.reduce((a,d)=>a+d.v,0)||1;let start=-Math.PI/2;const cx=70,cy=70,r=55;
+  data.forEach(d=>{const sl=d.v/total*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,start+sl);ctx.fillStyle=d.c;ctx.fill();start+=sl});
+  $('m3-pleg').innerHTML=data.map(d=>'<div style="font-size:.78rem;margin:3px 0"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+d.c+';margin-right:6px"></span>'+d.l+': <strong>'+d.v+'</strong></div>').join('')}
+
+async function loadRules(){const el=$('m3-rules');
+  try{const d=await api('/api/pipeline/rules');
+    if(d.rules){el.innerHTML='<table><thead><tr><th>ID</th><th>Açıklama</th><th>Durum</th></tr></thead><tbody>'+d.rules.map(r=>'<tr><td>'+esc(r.id||'')+'</td><td>'+esc(r.description||r.name||'')+'</td><td>'+(r.active!==false?'<span style="color:var(--acc)">Aktif</span>':'<span style="color:var(--t3)">Pasif</span>')+'</td></tr>').join('')+'</tbody></table>'}
+    else throw 0;
+  }catch(e){el.innerHTML='<div class="ph">Kurallar endpoint\'i henüz aktif değil</div>'}}
+
+// M4 Docs
+async function loadDocs(){const ce=$('m4-certs'),de=$('m4-dvrs');ce.innerHTML='<div class="ph"><span class="sp"></span></div>';
+  try{const d=await api('/api/crewai/artifacts');const all=d.artifacts||[];
+    const certs=all.filter(a=>a.name.toLowerCase().includes('cert')||a.name.toLowerCase().includes('truth'));
+    const dvrs=all.filter(a=>a.name.toLowerCase().startsWith('dvr')||a.name.toLowerCase().includes('victim'));
+    ce.innerHTML=certs.length?docTbl(certs):'<div class="ph">Sertifika bulunamadı</div>';
+    de.innerHTML=dvrs.length?docTbl(dvrs):'<div class="ph">DVR raporu bulunamadı</div>';
+  }catch(e){ce.innerHTML='<div class="ph">Yüklenemedi</div>'}}
+
+function docTbl(items){return '<table><thead><tr><th>Belge</th><th>Boyut</th><th>Tarih</th><th>İşlemler</th></tr></thead><tbody>'+
+  items.map(a=>'<tr><td style="font-family:var(--m);font-size:.75rem">'+esc(a.name)+'</td><td>'+fmtB(a.size)+'</td><td style="font-size:.7rem;color:var(--t3)">'+(a.modified?new Date(a.modified).toLocaleString('tr-TR'):'')+'</td><td><button class="btn btn-o btn-s" onclick="viewArt(\''+esc(a.name)+'\')">Görüntüle</button></td></tr>').join('')+'</tbody></table>'}
+
+// M5 WitnessChain
+async function loadChain(){const se=$('m5-sum'),te=$('m5-tbl');se.innerHTML='<div class="ph"><span class="sp"></span></div>';
+  try{const d=await api('/api/crewai/trust-chain');_chainData=d;
+    if(d.status==='no_chain'){se.innerHTML='<div class="ph">Henüz zincir yok — pipeline çalıştırın</div>';te.innerHTML='';return}
+    se.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">'+
+      '<div><div style="font-size:.68rem;color:var(--t3)">Chain Hash</div><div class="hash" style="word-break:break-all;font-size:.68rem">'+(d.chain_hash||'—')+'<br><button class="cp-btn" onclick="cpClip(\''+esc(d.chain_hash||'')+'\')">Kopyala</button></div></div>'+
+      '<div><div style="font-size:.68rem;color:var(--t3)">Ledger Seal</div><div class="hash" style="word-break:break-all;font-size:.68rem">'+(d.ledger_seal||'—')+'</div></div>'+
+      '<div><div style="font-size:.68rem;color:var(--t3)">Durum</div><div style="font-size:1.2rem;font-weight:700;color:'+(d.verified?'var(--acc)':'var(--red)')+'">'+(d.verified?'✓ DOĞRULANDI':'✗ GEÇERSİZ')+'</div>'+
+      '<div style="font-size:.7rem;color:var(--t3)">'+(d.entries_count||0)+' girdi | Karar: <strong>'+(d.final_decision||'—')+'</strong></div></div></div>';
+    $('m5-vin').value=d.chain_hash||'';
+    const entries=d.entries||[];if(!entries.length){te.innerHTML='';return}
+    const ac={'SEAL':'#ffaa00','JUDGE':'#ffaa00','BUILD':'#00ff88','PIPELINE_START':'#4488ff','EVALUATE':'var(--t2)'};
+    te.innerHTML='<table><thead><tr><th>Seq</th><th>Aktör</th><th>Aksiyon</th><th>Entry Hash</th><th>Zaman</th></tr></thead><tbody>'+
+      entries.map(e=>'<tr style="'+(e.action==='SEAL'?'background:rgba(255,170,0,.06)':e.action==='JUDGE'?'background:rgba(255,170,0,.03)':'')+'">'+
+        '<td style="font-weight:700;color:var(--acc)">'+e.sequence+'</td>'+
+        '<td style="font-family:var(--m);font-size:.72rem">'+esc(e.agent_id)+'</td>'+
+        '<td><span style="color:'+(ac[e.action]||'var(--t2)')+';font-weight:600;font-size:.75rem">'+e.action+'</span></td>'+
+        '<td><span class="hash">'+(e.entry_hash||'').slice(0,18)+'...</span> <button class="cp-btn" onclick="cpClip(\''+esc(e.entry_hash||'')+'\')">⧉</button></td>'+
+        '<td style="font-size:.68rem;color:var(--t3)">'+(e.timestamp||'')+'</td></tr>').join('')+'</tbody></table>';
+  }catch(e){se.innerHTML='<div class="ph">Yüklenemedi</div>'}}
+
+function dlChainJSON(){if(!_chainData||_chainData.status==='no_chain'){toast('Zincir verisi yok','ter');return}
+  const b=new Blob([JSON.stringify(_chainData,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='witness_chain_export.json';a.click();toast('JSON indirildi')}
+
+async function verifySeal(){const h=$('m5-vin').value.trim();if(!h){toast('Hash girin','ter');return}
+  const vr=$('m5-vr');vr.className='vbox';vr.style.display='none';
+  try{const d=await api('/api/crewai/verify-seal/'+encodeURIComponent(h));
+    if(d.verdict==='VALID'){vr.className='vbox ok';vr.innerHTML='✓ GEÇERLİ — Zincir doğrulandı<br>Girdi sayısı: '+d.entries_count+' | Eşleşme: '+d.match}
+    else{vr.className='vbox bad';vr.innerHTML='✗ GEÇERSİZ — Hash eşleşmiyor<br>Sorgu: '+h.slice(0,32)+'...<br>Kayıtlı: '+(d.stored_hash||'').slice(0,32)+'...'}
+  }catch(e){vr.className='vbox bad';vr.innerHTML='✗ Doğrulama hatası: '+e.message}}
+
+// M6 Users
+async function loadUsers(){const el=$('m6-list');el.innerHTML='<div class="ph"><span class="sp"></span></div>';
+  try{const d=await api('/api/admin/users');
+    if(d.users&&d.users.length){el.innerHTML='<table><thead><tr><th>Kullanıcı</th><th>Rol</th><th>Tarih</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>'+
+      d.users.map(u=>'<tr><td>'+esc(u.username||u.name||'')+'</td><td>'+esc(u.role||'')+'</td><td style="font-size:.7rem;color:var(--t3)">'+(u.created||'')+'</td><td>'+(u.active!==false?'<span style="color:var(--acc)">Aktif</span>':'Pasif')+'</td><td><button class="btn btn-d btn-s" onclick="delUser(\''+esc(u.id||u.username||'')+'\')">Sil</button></td></tr>').join('')+'</tbody></table>'}
+    else throw 0;
+  }catch(e){el.innerHTML='<div class="ph">Kullanıcı endpoint\'i henüz aktif değil</div>'}}
+
+async function addUser(){const u=$('m6-uname').value.trim(),p=$('m6-upass').value,r=$('m6-urole').value;
+  if(!u||!p){toast('Kullanıcı adı ve şifre gerekli','ter');return}
+  try{await api('/api/admin/users',{method:'POST',body:{username:u,password:p,role:r}});toast('Kullanıcı eklendi');loadUsers();$('m6-uname').value='';$('m6-upass').value=''}
+  catch(e){toast('Bu özellik yakında aktif edilecek','ter')}}
+
+function delUser(id){openConfirm('Kullanıcı Sil','Bu kullanıcıyı silmek istediğinizden emin misiniz?',()=>{
+  api('/api/admin/users/'+encodeURIComponent(id),{method:'DELETE'}).then(()=>{toast('Silindi');loadUsers()}).catch(()=>toast('Bu özellik yakında aktif edilecek','ter'))})}
+
+let _keyVisible=false;
+function toggleKey(){_keyVisible=!_keyVisible;$('m6-mkey').textContent=_keyVisible?AK:'••••••••••••';$('m6-ktog').textContent=_keyVisible?'Gizle':'Göster'}
+function rotateKey(){openConfirm('Yeni API Key','Yeni key oluşturulacak. Mevcut key geçersiz olacak.',()=>{
+  api('/api/admin/rotate-key',{method:'POST'}).then(d=>{$('m6-kres').innerHTML='<span style="color:var(--acc)">Yeni key: '+esc(d.new_key||'—')+'</span>'}).catch(()=>{$('m6-kres').textContent='Bu özellik yakında aktif edilecek'})})}
+
+// M7 Emergency
+async function refreshEm(){try{
+  const[em,bt]=await Promise.all([api('/api/admin/emergency-status'),api('/api/admin/boot-status')]);
+  $('em-dot').className='sdot '+(em.emergency_stopped?'r':'g');
+  $('em-txt').textContent=em.emergency_stopped?'ACİL DURUM AKTİF':'Sistem Çalışıyor';
+  $('em-txt').style.color=em.emergency_stopped?'var(--red)':'var(--acc)';
+  $('m7-boot').innerHTML='<div class="srow"><div class="sdot '+(bt.boot_locked?'r':'g')+'"></div><span>Boot: <strong>'+(bt.boot_locked?'KİLİTLİ':'OK')+'</strong></span></div>'+
+    '<div class="srow"><div class="sdot '+(bt.status==='PASS'?'g':'r')+'"></div><span>Durum: <strong>'+(bt.status||'—')+'</strong></span></div>'+
+    (bt.genesis_hash?'<div style="margin-top:6px;font-size:.72rem;color:var(--t3)">Genesis: <span class="hash">'+bt.genesis_hash.slice(0,32)+'...</span> <button class="cp-btn" onclick="cpClip(\''+esc(bt.genesis_hash)+'\')">Kopyala</button></div>':'');
+}catch(e){toast('Durum yüklenemedi','ter')}}
+
+function eStop(){openConfirm('⚠️ SİSTEMİ DURDUR','Tüm pipeline işlemleri duracak. Devam etmek için "DURDUR" yazın.',v=>{
+  if(v!=='DURDUR'){toast('İptal edildi — "DURDUR" yazmanız gerekiyor','ter');return}
+  api('/api/admin/emergency-stop',{method:'POST',body:{reason:'Admin panel manual stop'}}).then(()=>{toast('Sistem durduruldu','ter');refreshEm();loadHealth()}).catch(e=>toast('Hata: '+e.message,'ter'))},true,'Onay: "DURDUR" yazın')}
+
+function bootRegen(){openConfirm('Genesis Yenile','Genesis manifest yeniden oluşturulacak. Devam edilsin mi?',()=>{
+  $('m7-rres').innerHTML='<span class="sp"></span> Yenileniyor...';
+  api('/api/admin/boot-regenerate',{method:'POST'}).then(()=>{$('m7-rres').innerHTML='<span style="color:var(--acc)">✓ Yenilendi</span>';toast('Genesis yenilendi');refreshEm();loadHealth()})
+  .catch(e=>{$('m7-rres').innerHTML='<span style="color:var(--red)">✗ Hata: '+e.message+'</span>'})})}
+
+// M8 Settings
+function saveLLMName(){const n=$('m8-llmn').value.trim()||'YARUKSAI Karar Motoru';localStorage.setItem('yaruksai_llm_name',n);$('m1-llm').textContent=n;toast('Kaydedildi')}
+
+async function loadSysInfo(){try{const d=await api('/health');
+  let h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.8rem">';
+  Object.entries(d).forEach(([k,v])=>{if(typeof v!=='object')h+='<div><span style="color:var(--t3);font-size:.7rem">'+esc(k)+'</span><br><strong>'+esc(String(v))+'</strong> <button class="cp-btn" onclick="cpClip(\''+esc(String(v))+'\')">⧉</button></div>'});
+  h+='</div>';$('m8-info').innerHTML=h}catch(e){$('m8-info').innerHTML='<div class="ph">Yüklenemedi</div>'}}
+
+// Utilities
+function cpClip(t){navigator.clipboard.writeText(t).then(()=>toast('Kopyalandı')).catch(()=>{})}
+
+// Auto-load on tab switch
+const _loaded={};
+$('side').addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b)return;const m=b.dataset.m;
+  if(m==='m3'&&!_loaded.m3){_loaded.m3=1;loadMizan()}
+  if(m==='m5'&&!_loaded.m5){_loaded.m5=1;loadChain()}
+  if(m==='m7'&&!_loaded.m7){_loaded.m7=1;refreshEm()}
 });
-
-function doLogout() {
-  API_KEY = '';
-  if (sseSource) { sseSource.close(); sseSource = null; }
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('auth-gate').style.display = 'flex';
-  document.getElementById('auth-key').value = '';
-  document.getElementById('auth-error').style.display = 'none';
-}
-
-// ─── Fetch Helper ──────────────────────────────────
-async function apiFetch(path, opts = {}) {
-  const headers = { ...(opts.headers || {}) };
-  if (API_KEY) headers['X-Admin-Key'] = API_KEY;
-  if (opts.body && typeof opts.body === 'object') {
-    headers['Content-Type'] = 'application/json';
-    opts.body = JSON.stringify(opts.body);
-  }
-  try {
-    const res = await fetch(path, { ...opts, headers });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`${res.status}: ${txt.slice(0,200)}`);
-    }
-    return await res.json();
-  } catch(e) {
-    console.error(`API ${path}:`, e);
-    throw e;
-  }
-}
-
-// ─── Toast ─────────────────────────────────────────
-function toast(msg, type='ok') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  setTimeout(() => t.className = 'toast', 3000);
-}
-
-// ─── Tabs ──────────────────────────────────────────
-document.getElementById('nav').addEventListener('click', e => {
-  const btn = e.target.closest('button[data-tab]');
-  if (!btn) return;
-  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById('sec-' + btn.dataset.tab).classList.add('active');
-});
-
-// ─── Dashboard ─────────────────────────────────────
-async function bootDashboard() {
-  await Promise.all([loadHealth(), loadConfig(), loadChainSummary(), loadPipeSummary()]);
-}
-
-async function loadHealth() {
-  try {
-    const d = await apiFetch('/health');
-    const el = id => document.getElementById(id);
-    el('d-status').textContent = d.status === 'healthy' ? '● HEALTHY' : '○ UNHEALTHY';
-    el('d-status').className = 'card-value ' + (d.status === 'healthy' ? 'ok' : 'err');
-    el('d-status-sub').textContent = `Boot: ${d.boot_status || '—'}`;
-    el('d-boot').textContent = d.boot_locked ? '🔒 LOCKED' : '✓ OK';
-    el('d-boot').className = 'card-value ' + (d.boot_locked ? 'err' : 'ok');
-    el('d-boot-sub').textContent = d.boot_locked ? 'System locked — action required' : 'Genesis verified';
-    el('d-emergency').textContent = d.emergency_stopped ? '🛑 STOPPED' : '✓ CLEAR';
-    el('d-emergency').className = 'card-value ' + (d.emergency_stopped ? 'err' : 'ok');
-    el('d-emergency-sub').textContent = d.emergency_stopped ? 'Emergency stop active' : 'No emergency';
-    // Topbar pills
-    el('top-health').textContent = d.status === 'healthy' ? 'HEALTHY' : 'UNHEALTHY';
-    el('top-health').className = 'pill ' + (d.status === 'healthy' ? 'pill-ok' : 'pill-err');
-    if (d.boot_locked || d.emergency_stopped) {
-      el('top-boot').style.display = 'inline';
-      el('top-boot').textContent = d.boot_locked ? 'LOCKED' : 'E-STOP';
-      el('top-boot').className = 'pill pill-err';
-    } else {
-      el('top-boot').style.display = 'none';
-    }
-  } catch(e) {
-    document.getElementById('d-status').textContent = '× ERROR';
-    document.getElementById('d-status').className = 'card-value err';
-  }
-}
-
-async function loadConfig() {
-  try {
-    const d = await apiFetch('/api/crewai/config');
-    document.getElementById('d-llm').textContent = (d.llm_provider || '—').toUpperCase();
-    document.getElementById('d-llm-sub').textContent = d.llm_model || '';
-  } catch(e) {
-    document.getElementById('d-llm').textContent = '—';
-  }
-}
-
-async function loadChainSummary() {
-  try {
-    const d = await apiFetch('/api/crewai/trust-chain');
-    const el = document.getElementById('d-chain-summary');
-    const badge = document.getElementById('d-chain-badge');
-    if (d.status === 'no_chain') {
-      el.innerHTML = '<div class="loading-placeholder">No pipeline run yet</div>';
-      badge.textContent = 'NONE';
-      return;
-    }
-    badge.textContent = d.verified ? '✓ VERIFIED' : '✗ INVALID';
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><span style="color:var(--text3);font-size:.75rem">Chain Hash</span><br><span class="hash">${(d.chain_hash||'').slice(0,32)}...</span></div>
-        <div><span style="color:var(--text3);font-size:.75rem">Ledger Seal</span><br><span class="hash">${(d.ledger_seal||'').slice(0,32)}...</span></div>
-        <div><span style="color:var(--text3);font-size:.75rem">Entries</span><br><strong>${d.entries_count || 0}</strong></div>
-        <div><span style="color:var(--text3);font-size:.75rem">Final Decision</span><br><strong class="decision-${d.final_decision}">${d.final_decision || '—'}</strong></div>
-      </div>`;
-  } catch(e) {
-    document.getElementById('d-chain-summary').innerHTML = '<div class="loading-placeholder">Failed to load</div>';
-  }
-}
-
-async function loadPipeSummary() {
-  try {
-    const d = await apiFetch('/api/crewai/status');
-    const el = document.getElementById('d-pipe-summary');
-    const badge = document.getElementById('d-pipe-badge');
-    if (!d.started_at) {
-      el.innerHTML = '<div class="loading-placeholder">No pipeline run yet</div>';
-      badge.textContent = 'NONE';
-      return;
-    }
-    badge.textContent = d.running ? 'RUNNING' : 'COMPLETED';
-    const stages = (d.stages || []).filter(s => s.status === 'done');
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-        <div><span style="color:var(--text3);font-size:.75rem">Status</span><br><strong>${d.running ? '⟳ Running' : '✓ Done'}</strong></div>
-        <div><span style="color:var(--text3);font-size:.75rem">Stages Done</span><br><strong>${stages.length}</strong></div>
-        <div><span style="color:var(--text3);font-size:.75rem">Goal</span><br><span style="font-size:.78rem;color:var(--text2)">${(d.goal||'—').slice(0,80)}</span></div>
-      </div>
-      ${d.started_at ? `<div style="margin-top:8px;font-size:.72rem;color:var(--text3)">Started: ${d.started_at}${d.finished_at ? ' | Finished: ' + d.finished_at : ''}</div>` : ''}`;
-  } catch(e) {
-    document.getElementById('d-pipe-summary').innerHTML = '<div class="loading-placeholder">Failed to load</div>';
-  }
-}
-
-// ─── Pipeline Management ───────────────────────────
-async function runPipeline() {
-  const goal = document.getElementById('pipe-goal').value.trim();
-  if (!goal) { toast('Enter a pipeline goal', 'err'); return; }
-
-  const btn = document.getElementById('btn-run-pipe');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Starting...';
-
-  try {
-    await apiFetch('/api/crewai/run', { method: 'POST', body: { goal } });
-    toast('Pipeline started');
-    document.getElementById('pipe-run-badge').textContent = 'RUNNING';
-    document.getElementById('pipe-progress-panel').style.display = 'block';
-    resetStageBlocks();
-    connectSSE();
-  } catch(e) {
-    toast('Failed: ' + e.message, 'err');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '▶ Run 6-Stage Pipeline';
-  }
-}
-
-function resetStageBlocks() {
-  document.querySelectorAll('#pipe-stages .stage-block').forEach(b => {
-    b.className = 'stage-block';
-    b.querySelector('.stage-status').textContent = 'Waiting';
-  });
-  document.getElementById('sse-log').innerHTML = '';
-  document.getElementById('pipe-stage-count').textContent = '0/6';
-}
-
-function connectSSE() {
-  if (sseSource) sseSource.close();
-  sseSource = new EventSource('/api/crewai/stream');
-  const log = document.getElementById('sse-log');
-  let doneCount = 0;
-
-  sseSource.onmessage = (event) => {
-    try {
-      const d = JSON.parse(event.data);
-      // Log entry
-      const entry = document.createElement('div');
-      entry.className = 'entry' + (d.type === 'error' ? ' error-event' : d.stage ? ' stage-event' : '');
-      const ts = new Date().toLocaleTimeString();
-      entry.textContent = `[${ts}] ${d.name || d.type || '?'}: ${d.status || d.message || d.decision || ''}`;
-      log.appendChild(entry);
-      log.scrollTop = log.scrollHeight;
-
-      // Update stage blocks
-      if (d.stage) {
-        const block = document.querySelector(`#pipe-stages .stage-block[data-stage="${d.stage}"]`);
-        if (block) {
-          block.className = 'stage-block ' + (d.status || '');
-          block.querySelector('.stage-status').textContent = d.detail || d.status || '';
-          if (d.status === 'done') doneCount++;
-          document.getElementById('pipe-stage-count').textContent = `${Math.min(doneCount,6)}/6`;
-        }
-      }
-
-      if (d.type === 'completed') {
-        document.getElementById('pipe-run-badge').textContent = 'COMPLETED';
-        toast('Pipeline completed: ' + (d.decision || ''));
-        sseSource.close(); sseSource = null;
-        loadArtifacts();
-        loadHealth();
-        loadChainSummary();
-      }
-      if (d.type === 'error') {
-        document.getElementById('pipe-run-badge').textContent = 'ERROR';
-        toast('Pipeline error: ' + (d.message || '').slice(0,60), 'err');
-        sseSource.close(); sseSource = null;
-      }
-    } catch(e) {}
-  };
-  sseSource.onerror = () => {
-    if (sseSource) { sseSource.close(); sseSource = null; }
-  };
-}
-
-async function loadArtifacts() {
-  const el = document.getElementById('artifacts-body');
-  el.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Loading...</div>';
-  try {
-    const d = await apiFetch('/api/crewai/artifacts');
-    if (!d.artifacts || !d.artifacts.length) {
-      el.innerHTML = '<div class="loading-placeholder">No artifacts yet</div>';
-      return;
-    }
-    el.innerHTML = `<table>
-      <thead><tr><th>Name</th><th>Size</th><th>Modified</th><th>Action</th></tr></thead>
-      <tbody>${d.artifacts.map(a => `
-        <tr>
-          <td style="font-family:var(--mono);font-size:.78rem">${esc(a.name)}</td>
-          <td>${fmtBytes(a.size)}</td>
-          <td style="font-size:.75rem;color:var(--text3)">${a.modified ? new Date(a.modified).toLocaleString() : ''}</td>
-          <td><button class="btn btn-sm btn-outline" onclick="viewArtifact('${esc(a.name)}')">View</button></td>
-        </tr>`).join('')}
-      </tbody></table>`;
-  } catch(e) {
-    el.innerHTML = '<div class="loading-placeholder">Failed to load</div>';
-  }
-}
-
-async function viewArtifact(name) {
-  try {
-    const d = await apiFetch('/api/crewai/artifacts/' + encodeURIComponent(name));
-    const content = typeof d === 'object' ? JSON.stringify(d, null, 2) : d;
-    const win = window.open('', '_blank');
-    win.document.write(`<html><head><title>${name}</title><style>body{background:#0a0a0a;color:#e8e8e8;font-family:'JetBrains Mono',monospace;font-size:13px;padding:20px;white-space:pre-wrap;word-wrap:break-word}</style></head><body>${esc(content)}</body></html>`);
-  } catch(e) { toast('Failed to load artifact', 'err'); }
-}
-
-// ─── Document Center ───────────────────────────────
-async function loadDocuments() {
-  const certEl = document.getElementById('cert-body');
-  const dvrEl = document.getElementById('dvr-body');
-  certEl.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Loading...</div>';
-  dvrEl.innerHTML = '';
-  try {
-    const d = await apiFetch('/api/crewai/artifacts');
-    const all = d.artifacts || [];
-    const certs = all.filter(a => a.name.toLowerCase().includes('certificate') || a.name.toLowerCase().includes('cert'));
-    const dvrs = all.filter(a => a.name.toLowerCase().startsWith('dvr') || a.name.toLowerCase().includes('victim'));
-    const others = all.filter(a => !certs.includes(a) && !dvrs.includes(a));
-
-    certEl.innerHTML = certs.length ? buildDocTable(certs) : '<div class="loading-placeholder">No certificates found</div>';
-    dvrEl.innerHTML = dvrs.length ? buildDocTable(dvrs) : '<div class="loading-placeholder">No DVR reports found</div>';
-  } catch(e) {
-    certEl.innerHTML = '<div class="loading-placeholder">Failed to load</div>';
-  }
-}
-
-function buildDocTable(items) {
-  return `<table>
-    <thead><tr><th>Document</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead>
-    <tbody>${items.map(a => `
-      <tr>
-        <td style="font-family:var(--mono);font-size:.78rem">${esc(a.name)}</td>
-        <td>${fmtBytes(a.size)}</td>
-        <td style="font-size:.75rem;color:var(--text3)">${a.modified ? new Date(a.modified).toLocaleString() : ''}</td>
-        <td><button class="btn btn-sm btn-outline" onclick="viewArtifact('${esc(a.name)}')">View</button></td>
-      </tr>`).join('')}
-    </tbody></table>`;
-}
-
-// ─── Emergency Controls ────────────────────────────
-async function refreshEmergency() {
-  try {
-    const [em, boot] = await Promise.all([
-      apiFetch('/api/admin/emergency-status'),
-      apiFetch('/api/admin/boot-status'),
-    ]);
-    const dot = document.getElementById('em-dot');
-    const txt = document.getElementById('em-status-text');
-    if (em.emergency_stopped) {
-      dot.className = 'status-dot red';
-      txt.textContent = 'EMERGENCY STOP ACTIVE';
-      txt.style.color = 'var(--red)';
-    } else {
-      dot.className = 'status-dot green';
-      txt.textContent = 'System Operational';
-      txt.style.color = 'var(--accent)';
-    }
-    const bootEl = document.getElementById('em-boot-detail');
-    bootEl.innerHTML = `
-      <div class="status-row"><div class="status-dot ${boot.boot_locked ? 'red' : 'green'}"></div><span>Boot Lock: <strong>${boot.boot_locked ? 'LOCKED' : 'OK'}</strong></span></div>
-      <div class="status-row"><div class="status-dot ${boot.status === 'PASS' ? 'green' : 'red'}"></div><span>Boot Status: <strong>${boot.status || '—'}</strong></span></div>
-      ${boot.genesis_hash ? `<div style="margin-top:8px;font-size:.75rem;color:var(--text3)">Genesis: <span class="hash">${boot.genesis_hash.slice(0,32)}...</span></div>` : ''}`;
-  } catch(e) {
-    toast('Failed to load emergency status', 'err');
-  }
-}
-
-async function emergencyStop() {
-  if (!confirm('⚠️ EMERGENCY STOP — Are you sure? This will halt all pipeline operations.')) return;
-  try {
-    await apiFetch('/api/admin/emergency-stop', { method: 'POST', body: { reason: 'Admin panel manual stop' } });
-    toast('Emergency stop activated', 'err');
-    refreshEmergency();
-    loadHealth();
-  } catch(e) {
-    toast('Failed: ' + e.message, 'err');
-  }
-}
-
-async function bootRegenerate() {
-  const el = document.getElementById('em-regen-result');
-  el.innerHTML = '<span class="spinner"></span> Regenerating...';
-  try {
-    const d = await apiFetch('/api/admin/boot-regenerate', { method: 'POST' });
-    el.innerHTML = `<span style="color:var(--accent)">✓ Genesis regenerated</span>`;
-    toast('Genesis regenerated');
-    refreshEmergency();
-    loadHealth();
-  } catch(e) {
-    el.innerHTML = `<span style="color:var(--red)">✗ Failed: ${e.message}</span>`;
-  }
-}
-
-// ─── WitnessChain Viewer ───────────────────────────
-async function loadWitnessChain() {
-  const summaryEl = document.getElementById('witness-summary');
-  const tableEl = document.getElementById('witness-table-wrap');
-  summaryEl.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Loading...</div>';
-  tableEl.innerHTML = '';
-  try {
-    const d = await apiFetch('/api/crewai/trust-chain');
-    if (d.status === 'no_chain') {
-      summaryEl.innerHTML = '<div class="loading-placeholder">No witness chain available — run a pipeline first</div>';
-      return;
-    }
-    summaryEl.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-        <div>
-          <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">Chain Hash</div>
-          <div class="hash" style="word-break:break-all">${d.chain_hash || '—'}</div>
-        </div>
-        <div>
-          <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">Ledger Seal</div>
-          <div class="hash" style="word-break:break-all">${d.ledger_seal || '—'}</div>
-        </div>
-        <div>
-          <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">Status</div>
-          <div style="font-size:1.2rem;font-weight:700;color:${d.verified ? 'var(--accent)' : 'var(--red)'}">${d.verified ? '✓ VERIFIED' : '✗ INVALID'}</div>
-          <div style="font-size:.72rem;color:var(--text3)">${d.entries_count} entries | Decision: <strong class="decision-${d.final_decision}">${d.final_decision || '—'}</strong></div>
-        </div>
-      </div>
-      <div style="margin-top:12px;padding:8px 12px;background:var(--bg);border-radius:6px;display:flex;gap:24px;font-size:.72rem;color:var(--text3)">
-        <span>📜 Art. 13: ${d.eu_ai_act?.article_13 || '—'}</span>
-        <span>📋 Art. 17: ${d.eu_ai_act?.article_17 || '—'}</span>
-      </div>`;
-
-    // Entries table
-    const entries = d.entries || [];
-    if (entries.length) {
-      const actionColors = { PIPELINE_START: 'var(--blue)', EVALUATE: 'var(--text)', JUDGE: 'var(--yellow)', BUILD: 'var(--accent)', SEAL: 'var(--red)' };
-      tableEl.innerHTML = `<table>
-        <thead><tr><th>Seq</th><th>Agent</th><th>Action</th><th>Evidence Hash</th><th>Entry Hash</th><th>Timestamp</th></tr></thead>
-        <tbody>${entries.map(e => `
-          <tr>
-            <td style="font-weight:600;color:var(--accent)">${e.sequence}</td>
-            <td style="font-family:var(--mono);font-size:.75rem">${esc(e.agent_id)}</td>
-            <td><span style="color:${actionColors[e.action] || 'var(--text2)'}; font-weight:600;font-size:.78rem">${e.action}</span></td>
-            <td class="hash">${(e.evidence_hash||'').slice(0,20)}...</td>
-            <td class="hash">${(e.entry_hash||'').slice(0,20)}...</td>
-            <td style="font-size:.72rem;color:var(--text3)">${e.timestamp || ''}</td>
-          </tr>`).join('')}
-        </tbody></table>`;
-    }
-
-    // Auto-fill verify input
-    document.getElementById('verify-hash-input').value = d.chain_hash || '';
-  } catch(e) {
-    summaryEl.innerHTML = '<div class="loading-placeholder">Failed to load chain</div>';
-  }
-}
-
-async function verifySeal() {
-  const hashInput = document.getElementById('verify-hash-input').value.trim();
-  if (!hashInput) { toast('Enter a chain hash', 'err'); return; }
-  const result = document.getElementById('verify-result');
-  result.style.display = 'none';
-  try {
-    const d = await apiFetch('/api/crewai/verify-seal/' + encodeURIComponent(hashInput));
-    result.style.display = 'block';
-    if (d.verdict === 'VALID') {
-      result.className = 'verify-result valid';
-      result.innerHTML = `✓ VALID — Chain verified<br>Entries: ${d.entries_count} | Match: ${d.match}`;
-    } else {
-      result.className = 'verify-result invalid';
-      result.innerHTML = `✗ INVALID — Hash mismatch<br>Query: ${hashInput.slice(0,32)}...<br>Stored: ${(d.stored_hash||'').slice(0,32)}...`;
-    }
-  } catch(e) {
-    result.style.display = 'block';
-    result.className = 'verify-result invalid';
-    result.innerHTML = '✗ Verification failed: ' + e.message;
-  }
-}
-
-// ─── Utilities ─────────────────────────────────────
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function fmtBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  return (b/1048576).toFixed(1) + ' MB';
-}
 </script>
 </body>
 </html>
