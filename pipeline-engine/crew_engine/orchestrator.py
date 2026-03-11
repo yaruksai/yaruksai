@@ -3,8 +3,9 @@ from __future__ import annotations
 import sys
 import json
 import re
+import hashlib
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # src klasörünü Python path'e ekle
 CREWAI_DIR = Path(__file__).resolve().parent
@@ -50,6 +51,7 @@ from crew_engine.prompts import (
     POST_BUILD_AUDITOR_TASK_TEMPLATE,
 )
 from crew_engine.mizan_engine import run_mizan_engine
+from mizan_engine.witness_chain import WitnessChain
 
 ROOT_DIR = CREWAI_DIR.parent
 ARTIFACTS_DIR = ROOT_DIR / "artifacts"
@@ -455,6 +457,14 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
     load_environment()
     validate_env_keys()
 
+    # ─── WitnessChain: immutable SHA-256 evidence trail ───
+    chain = WitnessChain()
+    chain.add("crewai_orchestrator", "PIPELINE_START", {
+        "goal": project_goal[:500],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "engine": "crew_engine",
+    })
+
     current_goal = project_goal
     max_review_loops = 3
 
@@ -463,10 +473,9 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
     auditor_json: dict = {}
     mizan_output: dict = {}
 
-    # Builder çıktısı her durumda tanımlı olsun (ileride UnboundLocalError olmasın)
     builder_output: dict = {
         "version": "0.1.0",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "agent_id": "builder_stage",
         "status": "skipped",
         "reason": "Builder has not run yet",
@@ -485,6 +494,12 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
         architect_result = architect_crew.kickoff()
         architect_text = extract_result_text(architect_result)
         save_text("architect_stage_output.txt", architect_text)
+        chain.add("architect_agent", "EVALUATE", {
+            "stage": 1,
+            "output_length": len(architect_text),
+            "output_hash": hashlib.sha256(architect_text.encode()).hexdigest(),
+            "loop_index": loop_index,
+        })
         _emit_status(1, "Architect", "done", "Taslak hazır.")
 
         # STAGE 2 — Auditor
@@ -493,6 +508,12 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
         auditor_result = auditor_crew.kickoff()
         auditor_text = extract_result_text(auditor_result)
         save_text("auditor_stage_output.txt", auditor_text)
+        chain.add("auditor_agent", "EVALUATE", {
+            "stage": 2,
+            "output_length": len(auditor_text),
+            "output_hash": hashlib.sha256(auditor_text.encode()).hexdigest(),
+            "loop_index": loop_index,
+        })
         _emit_status(2, "Auditor", "done", "Denetim tamamlandı.")
 
         auditor_json = parse_json_safe(auditor_text, "auditor")
@@ -506,6 +527,14 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
             review_loop_count=loop_index + 1,  # 1..3
         )
         save_json("mizan_stage_output.json", mizan_output)
+        chain.add("mizan_engine", "JUDGE", {
+            "stage": 3,
+            "mizan_score": mizan_output.get("mizan_score"),
+            "review_decision": mizan_output.get("review_decision"),
+            "issue_count": mizan_output.get("issue_count"),
+            "accepted_fixes": len(mizan_output.get("accepted_fixes", [])),
+            "loop_index": loop_index,
+        })
         _emit_status(3, "Mizan", "done", f"Karar: {mizan_output.get('review_decision', '')}")
 
         review_decision = str(mizan_output.get("review_decision", "")).strip().lower()
@@ -666,6 +695,13 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
             "output": builder_json,
         }
         save_json("builder_stage_output.json", builder_output)
+    chain.add("builder_agent", "BUILD", {
+        "stage": 4,
+        "status": builder_output.get("status", "unknown"),
+        "output_hash": hashlib.sha256(
+            json.dumps(builder_output, sort_keys=True).encode()
+        ).hexdigest(),
+    })
     _emit_status(4, "Builder", "done", "Build tamamlandı.")
 
     # STAGE 5 — Post-build Auditor
@@ -702,6 +738,14 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
         post_build_audit = parse_json_safe(post_build_text, "post_build_audit")
         save_json("post_build_audit_output.json", post_build_audit)
 
+    chain.add("post_build_auditor", "EVALUATE", {
+        "stage": 5,
+        "ready_for_build": post_build_audit.get("ready_for_build"),
+        "issue_count": len(post_build_audit.get("issues", [])),
+        "output_hash": hashlib.sha256(
+            json.dumps(post_build_audit, sort_keys=True).encode()
+        ).hexdigest(),
+    })
     _emit_status(5, "Post-Build Auditor", "done", "Denetim tamamlandı.")
 
     # STAGE 6 — Final Mizan Gate
@@ -716,7 +760,38 @@ def run_six_stage_flow(project_goal: str) -> tuple[str, dict, dict, dict, dict, 
         post_build_audit=post_build_audit,
         loop_index=loops_completed,
     )
+
+    # ─── Final WitnessChain seal ───
+    chain.add("final_gate", "SEAL", {
+        "stage": 6,
+        "decision": final_gate_output.get("decision"),
+        "reason": final_gate_output.get("reason"),
+    })
+
+    # Inject chain_hash + ledger_seal into final gate output
+    final_gate_output["witness_chain"] = {
+        "chain_hash": chain.chain_hash,
+        "entries": chain.count,
+        "verified": chain.verify(),
+        "ledger_seal": hashlib.sha256(
+            (chain.chain_hash + "|" + final_gate_output.get("decision", "")).encode()
+        ).hexdigest(),
+    }
+
     save_json("final_gate_output.json", final_gate_output)
+
+    # Save full witness chain artifact
+    witness_chain_data = {
+        "schema_version": "1.0.0",
+        "engine": "crew_engine",
+        "chain_hash": chain.chain_hash,
+        "entries_count": chain.count,
+        "verified": chain.verify(),
+        "entries": chain.to_list(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    save_json("witness_chain_output.json", witness_chain_data)
+
     _emit_status(6, "Final Gate", "done", f"Karar: {final_gate_output.get('decision', '')}")
 
     return (

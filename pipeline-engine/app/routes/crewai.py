@@ -247,6 +247,77 @@ async def get_crewai_artifact(name: str):
             pass
 
     return JSONResponse({"name": name, "content": content})
-"""
-End of crewai route module.
-"""
+
+
+# ─── Trust Chain Endpoints ──────────────────────────────────
+
+@router.get("/api/crewai/trust-chain")
+async def get_trust_chain():
+    """Return the full WitnessChain with verification status.
+    EU AI Act Art. 13 (transparency) + Art. 17 (record-keeping).
+    """
+    chain_file = ARTIFACTS_DIR / "witness_chain_output.json"
+    if not chain_file.exists():
+        return JSONResponse({
+            "status": "no_chain",
+            "message": "No pipeline run yet — witness chain not available",
+        })
+
+    try:
+        chain_data = json.loads(chain_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise HTTPException(500, f"Failed to read witness chain: {e}")
+
+    # Also get final gate decision for context
+    gate_file = ARTIFACTS_DIR / "final_gate_output.json"
+    gate_data = {}
+    if gate_file.exists():
+        try:
+            gate_data = json.loads(gate_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    return JSONResponse({
+        "status": "available",
+        "chain_hash": chain_data.get("chain_hash"),
+        "entries_count": chain_data.get("entries_count"),
+        "verified": chain_data.get("verified"),
+        "final_decision": gate_data.get("decision"),
+        "ledger_seal": gate_data.get("witness_chain", {}).get("ledger_seal"),
+        "schema_version": chain_data.get("schema_version"),
+        "timestamp": chain_data.get("timestamp"),
+        "entries": chain_data.get("entries", []),
+        "eu_ai_act": {
+            "article_13": "Full transparency trail with SHA-256 evidence hashes",
+            "article_17": "Immutable record with chain verification",
+        },
+    })
+
+
+@router.get("/api/crewai/verify-seal/{chain_hash}")
+async def verify_seal(chain_hash: str):
+    """Verify a chain hash against the stored witness chain.
+    Returns verification result for external auditors.
+    """
+    chain_file = ARTIFACTS_DIR / "witness_chain_output.json"
+    if not chain_file.exists():
+        raise HTTPException(404, "No witness chain available")
+
+    try:
+        chain_data = json.loads(chain_file.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise HTTPException(500, f"Failed to read witness chain: {e}")
+
+    stored_hash = chain_data.get("chain_hash", "")
+    match = chain_hash == stored_hash
+
+    return JSONResponse({
+        "query_hash": chain_hash,
+        "stored_hash": stored_hash,
+        "match": match,
+        "chain_verified": chain_data.get("verified", False),
+        "entries_count": chain_data.get("entries_count", 0),
+        "verdict": "VALID" if (match and chain_data.get("verified")) else "INVALID",
+        "timestamp": chain_data.get("timestamp"),
+    })
+
