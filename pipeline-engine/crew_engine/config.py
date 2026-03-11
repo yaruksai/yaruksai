@@ -1,16 +1,28 @@
 import os
 
-# LLM Provider ayarları
-# "ollama" = ücretsiz local model, "openai" = ücretli OpenAI API
+# ─── LLM Provider Configuration ─────────────────────────────────
+# Supported: "groq", "ollama", "openai", "anthropic"
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
-LLM_MODEL = os.getenv("LLM_MODEL", "ollama/llama3.1" if LLM_PROVIDER == "ollama" else "openai/gpt-4o").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+LLM_MODEL = os.getenv("LLM_MODEL", "").strip()
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").strip()
+
+# Resolve LLM_MODEL based on provider
+if not LLM_MODEL:
+    if LLM_PROVIDER == "groq":
+        LLM_MODEL = f"groq/{GROQ_MODEL}"
+    elif LLM_PROVIDER == "ollama":
+        LLM_MODEL = os.getenv("OLLAMA_MODEL", "ollama/gemma3:1b")
+    elif LLM_PROVIDER == "anthropic":
+        LLM_MODEL = "anthropic/claude-3-5-sonnet-20241022"
+    else:
+        LLM_MODEL = "openai/gpt-4o"
 
 
 def get_llm():
     """
-    CrewAI Agent'ları için LLM nesnesi döndürür.
-    Desteklenen provider'lar: ollama, openai, anthropic
+    Return a CrewAI LLM instance for the configured provider.
+    Supported: groq, ollama, openai, anthropic
     """
     from crewai import LLM
 
@@ -18,6 +30,11 @@ def get_llm():
         return LLM(
             model=LLM_MODEL,
             base_url=OLLAMA_BASE_URL,
+        )
+    elif LLM_PROVIDER == "groq":
+        return LLM(
+            model=LLM_MODEL,
+            api_key=os.getenv("GROQ_API_KEY", ""),
         )
     elif LLM_PROVIDER == "anthropic":
         return LLM(
@@ -31,49 +48,43 @@ def get_llm():
         )
 
 
-# Roller
+# Roles
 ROLES = ["Owner", "Admin", "Reviewer", "Operator", "Viewer"]
 
-# Karar Tipleri
+# Decision Types
 DECISION_TYPES = {
     "AUTO": "AUTO",
     "REVIEW_REQUIRED": "REVIEW_REQUIRED",
     "REVIEW_OPTIONAL": "REVIEW_OPTIONAL",
 }
 
-# Timeout politikaları saniye cinsinden, environment variable ile konfigüre edilebilir
-# Yoksa default kullanılır
+# Timeouts (seconds), configurable via env
 TIMEOUTS = {
-    "approval_wait": int(os.getenv("APPROVAL_WAIT_TIMEOUT", "300")),  # 5 dakika default
-    "review_optional_timeout": int(os.getenv("REVIEW_OPTIONAL_TIMEOUT", "180")),  # 3 dakika default
+    "approval_wait": int(os.getenv("APPROVAL_WAIT_TIMEOUT", "300")),
+    "review_optional_timeout": int(os.getenv("REVIEW_OPTIONAL_TIMEOUT", "180")),
 }
 
-# CLI concurrency lock ayarı
 CLI_LOCK_FILE = os.getenv("CLI_LOCK_FILE", "/tmp/yaruksai_cli_lock.lock")
 
 
 def load_environment(env_path: str = ".env") -> None:
-    """
-    .env dosyasını varsa yükler (python-dotenv kuruluysa).
-    Kurulu değilse sessizce geçer.
-    """
+    """Load .env file if python-dotenv is available."""
     try:
-        from dotenv import load_dotenv  # type: ignore
+        from dotenv import load_dotenv
         load_dotenv(env_path, override=False)
     except Exception:
         return
 
 
 def validate_env_keys(required_keys=None) -> None:
-    """
-    Gerekli ENV anahtarlarını kontrol eder; yoksa RuntimeError atar.
-    Ollama kullanılıyorsa API key gerekmez.
-    """
+    """Validate required API keys based on provider."""
     if LLM_PROVIDER == "ollama":
-        return  # Ollama local çalışır, API key gerekmez
+        return
 
     if required_keys is None:
-        if LLM_PROVIDER == "anthropic":
+        if LLM_PROVIDER == "groq":
+            required_keys = ["GROQ_API_KEY"]
+        elif LLM_PROVIDER == "anthropic":
             required_keys = ["ANTHROPIC_API_KEY"]
         else:
             required_keys = ["OPENAI_API_KEY"]
@@ -85,3 +96,4 @@ def validate_env_keys(required_keys=None) -> None:
             + ", ".join(missing)
             + ". Set them in your shell or in a .env file."
         )
+
