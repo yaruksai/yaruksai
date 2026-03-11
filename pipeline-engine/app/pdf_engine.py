@@ -584,3 +584,293 @@ def generate_council_certificate(evaluate_result: Dict) -> bytes:
 
     doc.build(elements)
     return buf.getvalue()
+
+
+def generate_victim_report(report_data: Dict[str, Any]) -> bytes:
+    """
+    Generate a Digital Victim Report PDF — VERICORE sealed.
+    Documents AI-caused harm with EU AI Act legal references.
+
+    Input: {
+        report_id, victim_name, victim_contact, ai_system_name,
+        ai_system_provider, decision_date, harm_type, harm_description,
+        evidence_summary, audit_result (from /v1/audit), recommended_actions
+    }
+    """
+    ts = time.time()
+    report_id = report_data.get("report_id", f"DVR-{hashlib.sha256(str(ts).encode()).hexdigest()[:10].upper()}")
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        topMargin=15*mm, bottomMargin=15*mm,
+        leftMargin=18*mm, rightMargin=18*mm,
+        title=f"YARUKSAI Digital Victim Report — {report_id}",
+        author="YARUKSAI VERICORE",
+        subject="AI Harm Documentation & EU AI Act Violation Report",
+    )
+
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # ── Header ──
+    title_style = ParagraphStyle(
+        "DVRTitle", parent=styles["Heading1"],
+        fontName="Helvetica-Bold", fontSize=20,
+        textColor=DANGER_RED, alignment=TA_CENTER,
+        spaceAfter=2*mm,
+    )
+    sub_style = ParagraphStyle(
+        "DVRSub", parent=styles["Normal"],
+        fontName="Helvetica-Bold", fontSize=12,
+        textColor=NAVY_DEEP, alignment=TA_CENTER,
+        spaceAfter=3*mm,
+    )
+    vericore_style = ParagraphStyle(
+        "DVRVericore", parent=styles["Normal"],
+        fontName="Helvetica-Bold", fontSize=9,
+        textColor=ROYAL_BLUE, alignment=TA_CENTER,
+        spaceAfter=6*mm,
+    )
+
+    elements.append(Spacer(1, 8*mm))
+    elements.append(Paragraph("⚠️ DIGITAL VICTIM REPORT", title_style))
+    elements.append(Paragraph("AI Decision Harm Documentation", sub_style))
+    elements.append(Paragraph("━" * 60, ParagraphStyle(
+        "Sep", fontName="Helvetica", fontSize=8,
+        textColor=SILVER, alignment=TA_CENTER, spaceAfter=3*mm
+    )))
+    elements.append(Paragraph("✓ VERICORE Sealed — Cryptographic Evidence Chain", vericore_style))
+
+    # Meta
+    date_str = datetime.fromtimestamp(ts).strftime("%d/%m/%Y %H:%M UTC")
+    meta_style = ParagraphStyle("Meta", fontSize=8, textColor=TEXT_DIM, alignment=TA_CENTER)
+    elements.append(Paragraph(f"Report ID: {report_id}  |  Generated: {date_str}", meta_style))
+    elements.append(Spacer(1, 6*mm))
+
+    # ── Section style ──
+    section_style = ParagraphStyle(
+        "SectionHead", fontName="Helvetica-Bold", fontSize=12,
+        textColor=NAVY_DEEP, spaceAfter=3*mm,
+    )
+    body_style = ParagraphStyle(
+        "BodyText", fontName="Helvetica", fontSize=9,
+        textColor=black, leading=12, spaceAfter=2*mm,
+    )
+
+    # ── 1. INCIDENT OVERVIEW ──
+    elements.append(Paragraph("📋 1. INCIDENT OVERVIEW", section_style))
+    incident_data = [
+        ["Field", "Details"],
+        ["Victim Name", report_data.get("victim_name", "Anonymous")],
+        ["Contact", report_data.get("victim_contact", "Withheld")],
+        ["AI System", report_data.get("ai_system_name", "Unknown AI System")],
+        ["Provider", report_data.get("ai_system_provider", "Unknown Provider")],
+        ["Decision Date", report_data.get("decision_date", "Not specified")],
+        ["Harm Type", report_data.get("harm_type", "Unspecified")],
+        ["Report Status", "FILED — Pending Review"],
+    ]
+    table = Table(incident_data, colWidths=[40*mm, 125*mm])
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 1), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (1, 1), (1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY_MID),
+        ("TEXTCOLOR", (0, 0), (-1, 0), white),
+        ("TEXTCOLOR", (0, 1), (-1, -1), black),
+        ("BACKGROUND", (0, 1), (-1, -1), HexColor("#f8f9fc")),
+        ("GRID", (0, 0), (-1, -1), 0.5, SILVER),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 6*mm))
+
+    # ── 2. HARM DESCRIPTION ──
+    elements.append(Paragraph("📝 2. HARM DESCRIPTION", section_style))
+    harm_desc = report_data.get("harm_description", "No description provided.")
+    elements.append(Paragraph(harm_desc[:2000], body_style))
+    elements.append(Spacer(1, 4*mm))
+
+    # ── 3. EVIDENCE SUMMARY ──
+    elements.append(Paragraph("🔍 3. EVIDENCE SUMMARY", section_style))
+    evidence = report_data.get("evidence_summary", "No evidence provided.")
+    elements.append(Paragraph(evidence[:2000], body_style))
+    elements.append(Spacer(1, 4*mm))
+
+    # ── 4. YARUKSAI AUDIT RESULT ──
+    audit = report_data.get("audit_result", {})
+    if audit:
+        elements.append(Paragraph("⚖️ 4. YARUKSAI INTEGRITY AUDIT", section_style))
+        audit_data = [
+            ["Metric", "Value"],
+            ["INTEGRITY_INDEX", str(audit.get("INTEGRITY_INDEX", audit.get("mizan_score", "N/A")))],
+            ["Verdict", str(audit.get("verdict", "N/A"))],
+            ["Red Veto Triggered", str(audit.get("red_veto_triggered", "N/A"))],
+            ["Triggered Rules", str(len(audit.get("triggered_rules", audit.get("issues", []))))],
+            ["SHA-256 Seal", str(audit.get("ledger_seal", audit.get("sha256_seal", "")))[:40] + "..."],
+            ["Engine", str(audit.get("engine_version", audit.get("engine", "YARUKSAI v1.0")))],
+        ]
+        at = Table(audit_data, colWidths=[45*mm, 120*mm])
+        at.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, 1), (0, -1), "Helvetica-Bold"),
+            ("FONTNAME", (1, 1), (1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("BACKGROUND", (0, 0), (-1, 0), NAVY_MID),
+            ("TEXTCOLOR", (0, 0), (-1, 0), white),
+            ("GRID", (0, 0), (-1, -1), 0.5, SILVER),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(at)
+        elements.append(Spacer(1, 4*mm))
+
+        # Triggered rules detail
+        rules = audit.get("triggered_rules", audit.get("issues", []))
+        if rules:
+            elements.append(Paragraph("Triggered Violation Rules:", ParagraphStyle(
+                "RulesHead", fontName="Helvetica-Bold", fontSize=9,
+                textColor=DANGER_RED, spaceAfter=2*mm,
+            )))
+            for i, rule in enumerate(rules[:10]):
+                if isinstance(rule, dict):
+                    rule_text = f"#{i+1} [{rule.get('severity', rule.get('category',''))}] {rule.get('name', rule.get('problem', str(rule)))}"
+                else:
+                    rule_text = f"#{i+1} {rule}"
+                elements.append(Paragraph(rule_text[:200], ParagraphStyle(
+                    f"Rule{i}", fontName="Helvetica", fontSize=8,
+                    textColor=HexColor("#333333"), leftIndent=10*mm, spaceAfter=1*mm,
+                )))
+            elements.append(Spacer(1, 4*mm))
+
+    # ── 5. EU AI ACT VIOLATIONS ──
+    elements.append(Paragraph("🇪🇺 5. EU AI ACT VIOLATION MAPPING", section_style))
+
+    harm_type = report_data.get("harm_type", "").lower()
+    violations = []
+
+    # Map harm type to likely violations
+    violation_db = {
+        "discrimination": [
+            {"article": "Art. 5(1)(a)", "title": "Prohibited AI Practices", "desc": "AI systems deploying subliminal or manipulative techniques causing harm."},
+            {"article": "Art. 10", "title": "Data & Data Governance", "desc": "Training data must be representative and free from bias."},
+            {"article": "Art. 14", "title": "Human Oversight", "desc": "High-risk AI must allow effective human oversight."},
+        ],
+        "privacy": [
+            {"article": "Art. 10(5)", "title": "Data Governance", "desc": "Special categories of personal data processing restrictions."},
+            {"article": "Art. 13", "title": "Transparency", "desc": "Users must be informed about AI processing of their data."},
+            {"article": "GDPR Art. 22", "title": "Automated Decision-Making", "desc": "Right not to be subject to solely automated decisions with legal effects."},
+        ],
+        "employment": [
+            {"article": "Art. 6(2)", "title": "High-Risk Classification", "desc": "AI in employment/worker management is classified as high-risk."},
+            {"article": "Art. 13", "title": "Transparency", "desc": "Deployers must inform natural persons subject to high-risk AI."},
+            {"article": "Art. 14", "title": "Human Oversight", "desc": "Employment AI decisions require human review capability."},
+            {"article": "Art. 26", "title": "Deployer Obligations", "desc": "Deployers must monitor AI and report incidents."},
+        ],
+        "financial": [
+            {"article": "Art. 6(2)", "title": "High-Risk AI", "desc": "Creditworthiness assessment AI is high-risk."},
+            {"article": "Art. 13", "title": "Transparency", "desc": "Financial AI must provide clear explanations."},
+            {"article": "Art. 14", "title": "Human Oversight", "desc": "Automated financial decisions require human review."},
+        ],
+    }
+
+    # Find matching violations
+    for key, rules in violation_db.items():
+        if key in harm_type:
+            violations.extend(rules)
+
+    # Default violations (always applicable)
+    default_violations = [
+        {"article": "Art. 13", "title": "Transparency & Information", "desc": "AI decision-making process must be explainable."},
+        {"article": "Art. 14", "title": "Human Oversight", "desc": "Effective human oversight must be ensured."},
+        {"article": "Art. 72", "title": "Right to Complaint", "desc": "Affected persons have the right to lodge complaints."},
+    ]
+    if not violations:
+        violations = default_violations
+
+    viol_header = ["Article", "Title", "Violation"]
+    viol_data = [viol_header]
+    for v in violations:
+        viol_data.append([
+            v["article"],
+            v["title"],
+            Paragraph(v["desc"][:120], ParagraphStyle("ViolDesc", fontSize=7, fontName="Helvetica", leading=9)),
+        ])
+
+    vt = Table(viol_data, colWidths=[25*mm, 35*mm, 105*mm])
+    vt.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("BACKGROUND", (0, 0), (-1, 0), DANGER_RED),
+        ("TEXTCOLOR", (0, 0), (-1, 0), white),
+        ("BACKGROUND", (0, 1), (-1, -1), HexColor("#fff5f5")),
+        ("GRID", (0, 0), (-1, -1), 0.5, SILVER),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elements.append(vt)
+    elements.append(Spacer(1, 6*mm))
+
+    # ── 6. RECOMMENDED ACTIONS ──
+    elements.append(Paragraph("🎯 6. RECOMMENDED ACTIONS", section_style))
+    actions = report_data.get("recommended_actions", [
+        "File a formal complaint with the AI system provider.",
+        "Request full explanation of the AI decision under Art. 13.",
+        "Invoke right to human review under Art. 14.",
+        "Lodge complaint with national supervisory authority (Art. 72).",
+        "Preserve all evidence for potential legal proceedings.",
+    ])
+    for i, action in enumerate(actions[:8]):
+        elements.append(Paragraph(
+            f"<b>{i+1}.</b> {action}",
+            ParagraphStyle(f"Act{i}", fontSize=9, fontName="Helvetica", leftIndent=5*mm, spaceAfter=2*mm),
+        ))
+    elements.append(Spacer(1, 6*mm))
+
+    # ── SEAL FOOTER ──
+    elements.append(HRFlowable(width="100%", color=SILVER, thickness=1))
+    elements.append(Spacer(1, 4*mm))
+
+    seal_input = json.dumps({
+        "report_id": report_id,
+        "timestamp": ts,
+        "victim": report_data.get("victim_name", "anonymous"),
+        "ai_system": report_data.get("ai_system_name", "unknown"),
+        "issuer": "yaruksai-vericore",
+    }, sort_keys=True, ensure_ascii=False)
+    seal_hash = hashlib.sha256(seal_input.encode()).hexdigest()
+
+    elements.append(Paragraph("🔐 CRYPTOGRAPHIC SEAL (SHA-256)", ParagraphStyle(
+        "SealTitle", fontName="Helvetica-Bold", fontSize=9,
+        textColor=NAVY_MID, alignment=TA_CENTER, spaceAfter=2*mm,
+    )))
+    elements.append(Paragraph(seal_hash, ParagraphStyle(
+        "Seal", fontName="Courier", fontSize=7,
+        textColor=TEXT_DIM, alignment=TA_CENTER,
+    )))
+    elements.append(Spacer(1, 3*mm))
+    elements.append(Paragraph(
+        "This report was generated by YARUKSAI VERICORE engine. "
+        "The cryptographic seal guarantees document integrity. "
+        "Verification: verify.yaruksai.com",
+        ParagraphStyle("Disc", fontName="Helvetica", fontSize=6,
+                       textColor=TEXT_DIM, alignment=TA_CENTER),
+    ))
+    elements.append(Spacer(1, 2*mm))
+    elements.append(Paragraph(
+        f"© {datetime.now().year} YARUKSAI — LIGHT FOR AI · PROOF FOR HUMANS",
+        ParagraphStyle("Footer", fontName="Helvetica-Bold", fontSize=7,
+                       textColor=ROYAL_BLUE, alignment=TA_CENTER),
+    ))
+
+    doc.build(elements)
+    return buf.getvalue()
+

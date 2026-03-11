@@ -633,6 +633,135 @@ async def demo_alphaehr(request: Request):
         "statistics": audit["statistics"],
         "sha256_seal": audit["sha256_seal"],
         "certificate_url": cert_url,
-        "report_url": f"/api/pipeline/{run_id_val}/artifacts/demo_report.json",
+        "report_url": f"/api/pipeline/artifacts/{run_id_val}/demo_report.json",
         "engine": audit["engine"],
     })
+
+
+# ═══════════════════════════════════════════════════════════════
+#  POST /v1/victim-report — Digital Victim Report
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/v1/victim-report")
+@router.post("/api/v1/victim-report")
+async def create_victim_report(request: Request):
+    """
+    Digital Victim Report — Document AI-caused harm.
+
+    Accepts victim details + harm description → runs YARUKSAI audit
+    → generates formal PDF report with EU AI Act violation mapping.
+
+    Returns: JSON summary + PDF download URL.
+    """
+    if not FEAM_OS_AVAILABLE:
+        raise HTTPException(503, "FEAM OS modules not available")
+    if _shared.EMERGENCY_STOPPED:
+        raise HTTPException(503, "System in emergency stop mode")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    # Required fields validation
+    if not body.get("harm_description"):
+        raise HTTPException(400, "harm_description is required")
+
+    report_id = f"DVR-{safe_run_id()[:16]}"
+
+    # Optional: run audit on the AI system's decision data
+    audit_result = body.get("audit_result", None)
+    if not audit_result and body.get("decision_data"):
+        # Auto-audit if decision data is provided
+        try:
+            decision_data = body["decision_data"]
+            pipeline_input = {
+                "screening_results": decision_data.get("screening_results", {}),
+                "statistics": decision_data.get("statistics", {}),
+                "has_pii_data": decision_data.get("has_pii_data", True),
+                "has_explanation": decision_data.get("has_explanation", False),
+                "has_human_override": decision_data.get("has_human_override", False),
+                "has_feature_importance": decision_data.get("has_feature_importance", False),
+                "automated_final_decision": decision_data.get("automated_final_decision", True),
+                "candidate_ai_consent": decision_data.get("candidate_ai_consent", False),
+                "processing_location": decision_data.get("processing_location", "EU"),
+            }
+            registry = _get_registry()
+            reg_result = registry.evaluate(pipeline_input)
+            agent = _get_emanet_agent()
+            karar = agent.run_decision(pipeline_input)
+
+            audit_result = {
+                "INTEGRITY_INDEX": karar.sura_verdict.sigma_result.sigma,
+                "verdict": karar.verdict,
+                "red_veto_triggered": reg_result.red_veto_triggered,
+                "triggered_rules": [r.to_dict() for r in reg_result.red_veto_rules],
+                "ledger_seal": karar.sura_verdict.sigma_result.sha256_seal,
+                "engine_version": "1.0.0",
+            }
+        except Exception as e:
+            audit_result = {"error": f"Auto-audit failed: {str(e)}"}
+
+    # Build report data
+    report_data = {
+        "report_id": report_id,
+        "victim_name": body.get("victim_name", "Anonymous"),
+        "victim_contact": body.get("victim_contact", "Withheld"),
+        "ai_system_name": body.get("ai_system_name", "Unknown AI System"),
+        "ai_system_provider": body.get("ai_system_provider", "Unknown Provider"),
+        "decision_date": body.get("decision_date", "Not specified"),
+        "harm_type": body.get("harm_type", "unspecified"),
+        "harm_description": body.get("harm_description", ""),
+        "evidence_summary": body.get("evidence_summary", ""),
+        "audit_result": audit_result,
+        "recommended_actions": body.get("recommended_actions", None),
+    }
+
+    # Save JSON record
+    report_dir = ARTIFACT_ROOT / report_id
+    report_dir.mkdir(parents=True, exist_ok=True)
+    write_json(report_dir / "victim_report.json", report_data)
+
+    # Generate PDF
+    pdf_url = None
+    try:
+        from app.pdf_engine import generate_victim_report
+        pdf_bytes = generate_victim_report(report_data)
+        pdf_path = report_dir / "victim_report.pdf"
+        pdf_path.write_bytes(pdf_bytes)
+        pdf_url = f"/api/pipeline/artifacts/{report_id}/victim_report.pdf"
+    except Exception as e:
+        pdf_url = f"PDF generation error: {str(e)}"
+
+    # Log action
+    log_admin_action("VICTIM_REPORT_CREATED", {
+        "report_id": report_id,
+        "harm_type": report_data["harm_type"],
+        "ai_system": report_data["ai_system_name"],
+        "has_audit": audit_result is not None,
+    })
+
+    # SHA-256 seal for the report
+    seal_data = json.dumps({
+        "report_id": report_id,
+        "harm_type": report_data["harm_type"],
+        "ai_system": report_data["ai_system_name"],
+        "ts": time.time(),
+    }, sort_keys=True)
+    report_seal = _hashlib.sha256(seal_data.encode()).hexdigest()
+
+    return JSONResponse({
+        "status": "filed",
+        "report_id": report_id,
+        "victim_name": report_data["victim_name"],
+        "ai_system_name": report_data["ai_system_name"],
+        "harm_type": report_data["harm_type"],
+        "audit_verdict": audit_result.get("verdict") if audit_result else None,
+        "audit_integrity_index": audit_result.get("INTEGRITY_INDEX") if audit_result else None,
+        "pdf_url": pdf_url,
+        "json_url": f"/api/pipeline/artifacts/{report_id}/victim_report.json",
+        "sha256_seal": report_seal,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "legal_disclaimer": _shared.LEGAL_DISCLAIMER,
+    })
+
