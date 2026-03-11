@@ -6,6 +6,7 @@ from app.routes.user_auth import router as user_auth_router
 from app.routes.emergency import router as emergency_router
 from app.routes.audit import router as audit_router
 from app.routes.pipeline import router as pipeline_router
+from app.routes.crewai import router as crewai_router
 
 ALL_ROUTERS = [
     admin_os_router,
@@ -13,6 +14,8 @@ ALL_ROUTERS = [
     emergency_router,
     audit_router,
     pipeline_router,
+    crewai_router,
 ]
 
 __all__ = ["ALL_ROUTERS"]
+
