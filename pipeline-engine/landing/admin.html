@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YARUKSAI — Admin Panel</title>
+<meta name="description" content="YARUKSAI Admin OS — System Dashboard, Pipeline Management, Document Center, Emergency Controls">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0a;--bg2:#111113;--bg3:#1a1a1e;--bg4:#222228;
+  --accent:#00ff88;--accent2:#00cc6a;--accent-dim:rgba(0,255,136,.08);
+  --red:#ff4444;--red-dim:rgba(255,68,68,.12);
+  --yellow:#ffaa00;--yellow-dim:rgba(255,170,0,.1);
+  --blue:#4488ff;--blue-dim:rgba(68,136,255,.1);
+  --text:#e8e8e8;--text2:#999;--text3:#666;
+  --border:#2a2a2e;--radius:10px;
+  --font:'Inter',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+html{font-size:15px}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+
+/* ─── Auth Gate ────────────────────────────────────── */
+#auth-gate{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:380px;text-align:center}
+.auth-box h1{font-size:1.5rem;font-weight:700;margin-bottom:8px;letter-spacing:-.5px}
+.auth-box .subtitle{color:var(--text2);font-size:.85rem;margin-bottom:28px}
+.auth-box input{width:100%;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.9rem;outline:none;transition:border .2s}
+.auth-box input:focus{border-color:var(--accent)}
+.auth-box button{width:100%;margin-top:16px;padding:12px;background:var(--accent);color:#000;font-weight:600;font-size:.9rem;border:none;border-radius:8px;cursor:pointer;transition:all .2s}
+.auth-box button:hover{background:var(--accent2);transform:translateY(-1px)}
+.auth-error{color:var(--red);font-size:.8rem;margin-top:12px;display:none}
+
+/* ─── Layout ───────────────────────────────────────── */
+#app{display:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.topbar .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;letter-spacing:-.3px}
+.topbar .logo span{color:var(--accent)}
+.topbar .meta{display:flex;align-items:center;gap:16px}
+.topbar .meta .pill{font-size:.7rem;padding:4px 10px;border-radius:20px;font-weight:600;text-transform:uppercase}
+.pill-ok{background:rgba(0,255,136,.12);color:var(--accent)}
+.pill-err{background:var(--red-dim);color:var(--red)}
+.pill-warn{background:var(--yellow-dim);color:var(--yellow)}
+.btn-logout{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.75rem;transition:all .2s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+.nav{display:flex;gap:2px;padding:6px 28px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.nav button{background:none;border:none;color:var(--text2);padding:10px 18px;font-size:.82rem;font-weight:500;cursor:pointer;border-radius:8px 8px 0 0;transition:all .2s;position:relative}
+.nav button:hover{color:var(--text);background:var(--bg3)}
+.nav button.active{color:var(--accent);background:var(--bg3)}
+.nav button.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:2px}
+
+.main{padding:24px 28px;max-width:1400px;margin:0 auto}
+.section{display:none}
+.section.active{display:block}
+
+/* ─── Cards ────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:border .2s}
+.card:hover{border-color:var(--accent)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:.85rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.card-value{font-size:2rem;font-weight:700;line-height:1}
+.card-value.ok{color:var(--accent)}
+.card-value.err{color:var(--red)}
+.card-value.warn{color:var(--yellow)}
+.card-sub{font-size:.75rem;color:var(--text3);margin-top:6px}
+
+/* ─── Tables ───────────────────────────────────────── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:.9rem;font-weight:600}
+.panel-badge{font-size:.7rem;padding:3px 8px;border-radius:12px;background:var(--accent-dim);color:var(--accent);font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 16px;font-size:.72rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;background:var(--bg3);border-bottom:1px solid var(--border)}
+td{padding:10px 16px;font-size:.82rem;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.hash{font-family:var(--mono);font-size:.72rem;color:var(--blue)}
+.decision-complete{color:var(--accent);font-weight:600}
+.decision-revise{color:var(--yellow);font-weight:600}
+.decision-fail{color:var(--red);font-weight:600}
+
+/* ─── Forms ────────────────────────────────────────── */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:.8rem;font-weight:500;color:var(--text2);margin-bottom:6px}
+.form-group textarea,.form-group input[type=text]{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:.85rem;resize:vertical;outline:none;transition:border .2s}
+.form-group textarea:focus,.form-group input[type=text]:focus{border-color:var(--accent)}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{opacity:.9;transform:translateY(-1px)}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:6px 12px;font-size:.75rem}
+
+/* ─── Progress Bar ─────────────────────────────────── */
+.pipeline-stages{display:flex;gap:4px;margin:20px 0}
+.stage-block{flex:1;background:var(--bg3);border-radius:6px;padding:12px;text-align:center;transition:all .4s;position:relative;overflow:hidden}
+.stage-block.running{border:1px solid var(--accent);animation:pulse-stage 1.5s ease-in-out infinite}
+.stage-block.done{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3)}
+.stage-block.error{background:var(--red-dim);border:1px solid rgba(255,68,68,.3)}
+.stage-name{font-size:.7rem;font-weight:600;color:var(--text2);margin-bottom:4px}
+.stage-status{font-size:.65rem;color:var(--text3)}
+.stage-block.done .stage-name{color:var(--accent)}
+.stage-block.done .stage-status{color:var(--accent2)}
+@keyframes pulse-stage{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ─── Emergency ────────────────────────────────────── */
+.emergency-zone{background:var(--bg2);border:2px solid var(--red);border-radius:var(--radius);padding:24px;margin-bottom:24px}
+.emergency-zone h3{color:var(--red);font-size:1rem;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.status-row{display:flex;align-items:center;gap:12px;padding:8px 0;font-size:.85rem}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-dot.green{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.status-dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+.status-dot.yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+
+/* ─── Verify Box ───────────────────────────────────── */
+.verify-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:16px}
+.verify-result{margin-top:12px;padding:12px;border-radius:8px;font-family:var(--mono);font-size:.8rem;display:none}
+.verify-result.valid{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--accent)}
+.verify-result.invalid{background:var(--red-dim);border:1px solid rgba(255,68,68,.2);color:var(--red)}
+
+/* ─── SSE Log ──────────────────────────────────────── */
+.sse-log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;font-family:var(--mono);font-size:.75rem;color:var(--text3);margin-top:12px}
+.sse-log .entry{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.sse-log .entry.stage-event{color:var(--accent)}
+.sse-log .entry.error-event{color:var(--red)}
+
+/* ─── Toast ────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:.82rem;font-weight:500;z-index:1000;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1;pointer-events:auto}
+.toast.ok{background:var(--accent);color:#000}
+.toast.err{background:var(--red);color:#fff}
+
+/* ─── Scrollbar ────────────────────────────────────── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ─── Spinner ─────────────────────────────────── */
+.spinner{width:16px;height:16px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-placeholder{text-align:center;padding:40px;color:var(--text3);font-size:.85rem}
+</style>
+</head>
+<body>
+
+<!-- ═══════ AUTH GATE ═══════ -->
+<div id="auth-gate">
+  <div class="auth-box">
+    <h1>YARUKSAI</h1>
+    <div class="subtitle">Admin Panel — X-Admin-Key Required</div>
+    <input type="password" id="auth-key" placeholder="Enter Admin Key" autocomplete="off">
+    <button onclick="doAuth()">Authenticate</button>
+    <div class="auth-error" id="auth-error">Invalid API key — access denied</div>
+  </div>
+</div>
+
+<!-- ═══════ MAIN APP ═══════ -->
+<div id="app">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="logo">◆ <span>YARUKSAI</span> Admin Panel</div>
+    <div class="meta">
+      <span class="pill pill-ok" id="top-health">CHECKING...</span>
+      <span class="pill" id="top-boot" style="display:none"></span>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav" id="nav">
+    <button class="active" data-tab="dashboard">Dashboard</button>
+    <button data-tab="pipeline">Pipeline</button>
+    <button data-tab="documents">Documents</button>
+    <button data-tab="emergency">Emergency</button>
+    <button data-tab="witness">WitnessChain</button>
+  </div>
+
+  <div class="main">
+
+    <!-- ═══════ 1. DASHBOARD ═══════ -->
+    <div class="section active" id="sec-dashboard">
+      <div class="grid" id="dash-cards">
+        <div class="card">
+          <div class="card-header"><span class="card-title">System Status</span></div>
+          <div class="card-value ok" id="d-status">—</div>
+          <div class="card-sub" id="d-status-sub">Loading...</div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Boot Lock</span></div>
+          <div class="card-value" id="d-boot">—</div>
+          <div class="card-sub" id="d-boot-sub"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Emergency</span></div>
+          <div class="card-value" id="d-emergency">—</div>
+          <div class="card-sub" id="d-emergency-sub"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">LLM Provider</span></div>
+          <div class="card-value ok" id="d-llm" style="font-size:1.4rem">—</div>
+          <div class="card-sub" id="d-llm-sub"></div>
+        </div>
+      </div>
+
+      <!-- WitnessChain Summary -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🔗 WitnessChain — Last Run</span>
+          <span class="panel-badge" id="d-chain-badge">—</span>
+        </div>
+        <div style="padding:16px 20px" id="d-chain-summary">
+          <div class="loading-placeholder">Loading chain data...</div>
+        </div>
+      </div>
+
+      <!-- Last Pipeline Run -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📊 Last Pipeline Run</span>
+          <span class="panel-badge" id="d-pipe-badge">—</span>
+        </div>
+        <div style="padding:16px 20px" id="d-pipe-summary">
+          <div class="loading-placeholder">Loading pipeline data...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 2. PIPELINE MANAGEMENT ═══════ -->
+    <div class="section" id="sec-pipeline">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🚀 Run Pipeline</span>
+          <span class="panel-badge" id="pipe-run-badge">IDLE</span>
+        </div>
+        <div style="padding:20px">
+          <div class="form-group">
+            <label>Pipeline Goal</label>
+            <textarea id="pipe-goal" rows="3" placeholder="e.g. Audit AlphaHR v2.3 facial recognition system for EU AI Act compliance..."></textarea>
+          </div>
+          <button class="btn btn-primary" id="btn-run-pipe" onclick="runPipeline()">▶ Run 6-Stage Pipeline</button>
+        </div>
+      </div>
+
+      <!-- Stage Progress -->
+      <div class="panel" id="pipe-progress-panel" style="display:none">
+        <div class="panel-header">
+          <span class="panel-title">Pipeline Progress</span>
+          <span class="panel-badge" id="pipe-stage-count">0/6</span>
+        </div>
+        <div style="padding:20px">
+          <div class="pipeline-stages" id="pipe-stages">
+            <div class="stage-block" data-stage="1"><div class="stage-name">Architect</div><div class="stage-status">Waiting</div></div>
+            <div class="stage-block" data-stage="2"><div class="stage-name">Auditor</div><div class="stage-status">Waiting</div></div>
+            <div class="stage-block" data-stage="3"><div class="stage-name">Mizan</div><div class="stage-status">Waiting</div></div>
+            <div class="stage-block" data-stage="4"><div class="stage-name">Builder</div><div class="stage-status">Waiting</div></div>
+            <div class="stage-block" data-stage="5"><div class="stage-name">Post-Build</div><div class="stage-status">Waiting</div></div>
+            <div class="stage-block" data-stage="6"><div class="stage-name">Final Gate</div><div class="stage-status">Waiting</div></div>
+          </div>
+          <div class="sse-log" id="sse-log"></div>
+        </div>
+      </div>
+
+      <!-- Artifacts -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📁 Pipeline Artifacts</span>
+          <button class="btn btn-sm btn-outline" onclick="loadArtifacts()">Refresh</button>
+        </div>
+        <div id="artifacts-body">
+          <div class="loading-placeholder">Click Refresh to load artifacts</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 3. DOCUMENT CENTER ═══════ -->
+    <div class="section" id="sec-documents">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📜 Truth Certificates</span>
+          <button class="btn btn-sm btn-outline" onclick="loadDocuments()">Refresh</button>
+        </div>
+        <div id="cert-body">
+          <div class="loading-placeholder">Click Refresh to load documents</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📋 Digital Victim Reports</span>
+        </div>
+        <div id="dvr-body">
+          <div class="loading-placeholder">Will load with certificates</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 4. EMERGENCY CONTROLS ═══════ -->
+    <div class="section" id="sec-emergency">
+      <div class="emergency-zone">
+        <h3>⚠️ Emergency Controls</h3>
+        <div class="status-row">
+          <div class="status-dot green" id="em-dot"></div>
+          <span id="em-status-text">System Operational</span>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-danger" onclick="emergencyStop()">🛑 Emergency Stop</button>
+          <button class="btn btn-outline" onclick="refreshEmergency()">↻ Refresh Status</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Boot Status</span></div>
+          <div style="padding:16px 20px" id="em-boot-detail">
+            <div class="loading-placeholder">Loading...</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Boot Regenerate</span>
+          </div>
+          <div style="padding:16px 20px">
+            <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px">Regenerate genesis manifest. Use after code deployments.</p>
+            <button class="btn btn-primary" onclick="bootRegenerate()">🔄 Regenerate Genesis</button>
+            <div id="em-regen-result" style="margin-top:12px;font-size:.8rem;color:var(--text3)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 5. WITNESSCHAIN VIEWER ═══════ -->
+    <div class="section" id="sec-witness">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🔗 WitnessChain — Full Evidence Trail</span>
+          <button class="btn btn-sm btn-outline" onclick="loadWitnessChain()">Refresh</button>
+        </div>
+        <div id="witness-summary" style="padding:16px 20px">
+          <div class="loading-placeholder">Click Refresh to load chain</div>
+        </div>
+        <div id="witness-table-wrap"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">🔍 Verify Seal</span></div>
+        <div style="padding:16px 20px">
+          <div class="form-group">
+            <label>Chain Hash (SHA-256)</label>
+            <input type="text" id="verify-hash-input" placeholder="Paste chain_hash here...">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="verifySeal()">Verify</button>
+          <div class="verify-result" id="verify-result"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .main -->
+</div><!-- #app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   YARUKSAI Admin Panel — vanilla JS, no dependencies
+   ═══════════════════════════════════════════════════════ */
+
+let API_KEY = '';
+let sseSource = null;
+
+// ─── Auth ──────────────────────────────────────────
+function doAuth() {
+  const key = document.getElementById('auth-key').value.trim();
+  if (!key) return;
+  API_KEY = key;
+  apiFetch('/health').then(d => {
+    if (d && d.status) {
+      document.getElementById('auth-gate').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      bootDashboard();
+    } else throw new Error('bad');
+  }).catch(() => {
+    document.getElementById('auth-error').style.display = 'block';
+    API_KEY = '';
+  });
+}
+document.getElementById('auth-key').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doAuth();
+});
+
+function doLogout() {
+  API_KEY = '';
+  if (sseSource) { sseSource.close(); sseSource = null; }
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-gate').style.display = 'flex';
+  document.getElementById('auth-key').value = '';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+// ─── Fetch Helper ──────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (API_KEY) headers['X-Admin-Key'] = API_KEY;
+  if (opts.body && typeof opts.body === 'object') {
+    headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(opts.body);
+  }
+  try {
+    const res = await fetch(path, { ...opts, headers });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`${res.status}: ${txt.slice(0,200)}`);
+    }
+    return await res.json();
+  } catch(e) {
+    console.error(`API ${path}:`, e);
+    throw e;
+  }
+}
+
+// ─── Toast ─────────────────────────────────────────
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ─── Tabs ──────────────────────────────────────────
+document.getElementById('nav').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + btn.dataset.tab).classList.add('active');
+});
+
+// ─── Dashboard ─────────────────────────────────────
+async function bootDashboard() {
+  await Promise.all([loadHealth(), loadConfig(), loadChainSummary(), loadPipeSummary()]);
+}
+
+async function loadHealth() {
+  try {
+    const d = await apiFetch('/health');
+    const el = id => document.getElementById(id);
+    el('d-status').textContent = d.status === 'healthy' ? '● HEALTHY' : '○ UNHEALTHY';
+    el('d-status').className = 'card-value ' + (d.status === 'healthy' ? 'ok' : 'err');
+    el('d-status-sub').textContent = `Boot: ${d.boot_status || '—'}`;
+    el('d-boot').textContent = d.boot_locked ? '🔒 LOCKED' : '✓ OK';
+    el('d-boot').className = 'card-value ' + (d.boot_locked ? 'err' : 'ok');
+    el('d-boot-sub').textContent = d.boot_locked ? 'System locked — action required' : 'Genesis verified';
+    el('d-emergency').textContent = d.emergency_stopped ? '🛑 STOPPED' : '✓ CLEAR';
+    el('d-emergency').className = 'card-value ' + (d.emergency_stopped ? 'err' : 'ok');
+    el('d-emergency-sub').textContent = d.emergency_stopped ? 'Emergency stop active' : 'No emergency';
+    // Topbar pills
+    el('top-health').textContent = d.status === 'healthy' ? 'HEALTHY' : 'UNHEALTHY';
+    el('top-health').className = 'pill ' + (d.status === 'healthy' ? 'pill-ok' : 'pill-err');
+    if (d.boot_locked || d.emergency_stopped) {
+      el('top-boot').style.display = 'inline';
+      el('top-boot').textContent = d.boot_locked ? 'LOCKED' : 'E-STOP';
+      el('top-boot').className = 'pill pill-err';
+    } else {
+      el('top-boot').style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('d-status').textContent = '× ERROR';
+    document.getElementById('d-status').className = 'card-value err';
+  }
+}
+
+async function loadConfig() {
+  try {
+    const d = await apiFetch('/api/crewai/config');
+    document.getElementById('d-llm').textContent = (d.llm_provider || '—').toUpperCase();
+    document.getElementById('d-llm-sub').textContent = d.llm_model || '';
+  } catch(e) {
+    document.getElementById('d-llm').textContent = '—';
+  }
+}
+
+async function loadChainSummary() {
+  try {
+    const d = await apiFetch('/api/crewai/trust-chain');
+    const el = document.getElementById('d-chain-summary');
+    const badge = document.getElementById('d-chain-badge');
+    if (d.status === 'no_chain') {
+      el.innerHTML = '<div class="loading-placeholder">No pipeline run yet</div>';
+      badge.textContent = 'NONE';
+      return;
+    }
+    badge.textContent = d.verified ? '✓ VERIFIED' : '✗ INVALID';
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><span style="color:var(--text3);font-size:.75rem">Chain Hash</span><br><span class="hash">${(d.chain_hash||'').slice(0,32)}...</span></div>
+        <div><span style="color:var(--text3);font-size:.75rem">Ledger Seal</span><br><span class="hash">${(d.ledger_seal||'').slice(0,32)}...</span></div>
+        <div><span style="color:var(--text3);font-size:.75rem">Entries</span><br><strong>${d.entries_count || 0}</strong></div>
+        <div><span style="color:var(--text3);font-size:.75rem">Final Decision</span><br><strong class="decision-${d.final_decision}">${d.final_decision || '—'}</strong></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('d-chain-summary').innerHTML = '<div class="loading-placeholder">Failed to load</div>';
+  }
+}
+
+async function loadPipeSummary() {
+  try {
+    const d = await apiFetch('/api/crewai/status');
+    const el = document.getElementById('d-pipe-summary');
+    const badge = document.getElementById('d-pipe-badge');
+    if (!d.started_at) {
+      el.innerHTML = '<div class="loading-placeholder">No pipeline run yet</div>';
+      badge.textContent = 'NONE';
+      return;
+    }
+    badge.textContent = d.running ? 'RUNNING' : 'COMPLETED';
+    const stages = (d.stages || []).filter(s => s.status === 'done');
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div><span style="color:var(--text3);font-size:.75rem">Status</span><br><strong>${d.running ? '⟳ Running' : '✓ Done'}</strong></div>
+        <div><span style="color:var(--text3);font-size:.75rem">Stages Done</span><br><strong>${stages.length}</strong></div>
+        <div><span style="color:var(--text3);font-size:.75rem">Goal</span><br><span style="font-size:.78rem;color:var(--text2)">${(d.goal||'—').slice(0,80)}</span></div>
+      </div>
+      ${d.started_at ? `<div style="margin-top:8px;font-size:.72rem;color:var(--text3)">Started: ${d.started_at}${d.finished_at ? ' | Finished: ' + d.finished_at : ''}</div>` : ''}`;
+  } catch(e) {
+    document.getElementById('d-pipe-summary').innerHTML = '<div class="loading-placeholder">Failed to load</div>';
+  }
+}
+
+// ─── Pipeline Management ───────────────────────────
+async function runPipeline() {
+  const goal = document.getElementById('pipe-goal').value.trim();
+  if (!goal) { toast('Enter a pipeline goal', 'err'); return; }
+
+  const btn = document.getElementById('btn-run-pipe');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Starting...';
+
+  try {
+    await apiFetch('/api/crewai/run', { method: 'POST', body: { goal } });
+    toast('Pipeline started');
+    document.getElementById('pipe-run-badge').textContent = 'RUNNING';
+    document.getElementById('pipe-progress-panel').style.display = 'block';
+    resetStageBlocks();
+    connectSSE();
+  } catch(e) {
+    toast('Failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Run 6-Stage Pipeline';
+  }
+}
+
+function resetStageBlocks() {
+  document.querySelectorAll('#pipe-stages .stage-block').forEach(b => {
+    b.className = 'stage-block';
+    b.querySelector('.stage-status').textContent = 'Waiting';
+  });
+  document.getElementById('sse-log').innerHTML = '';
+  document.getElementById('pipe-stage-count').textContent = '0/6';
+}
+
+function connectSSE() {
+  if (sseSource) sseSource.close();
+  sseSource = new EventSource('/api/crewai/stream');
+  const log = document.getElementById('sse-log');
+  let doneCount = 0;
+
+  sseSource.onmessage = (event) => {
+    try {
+      const d = JSON.parse(event.data);
+      // Log entry
+      const entry = document.createElement('div');
+      entry.className = 'entry' + (d.type === 'error' ? ' error-event' : d.stage ? ' stage-event' : '');
+      const ts = new Date().toLocaleTimeString();
+      entry.textContent = `[${ts}] ${d.name || d.type || '?'}: ${d.status || d.message || d.decision || ''}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+
+      // Update stage blocks
+      if (d.stage) {
+        const block = document.querySelector(`#pipe-stages .stage-block[data-stage="${d.stage}"]`);
+        if (block) {
+          block.className = 'stage-block ' + (d.status || '');
+          block.querySelector('.stage-status').textContent = d.detail || d.status || '';
+          if (d.status === 'done') doneCount++;
+          document.getElementById('pipe-stage-count').textContent = `${Math.min(doneCount,6)}/6`;
+        }
+      }
+
+      if (d.type === 'completed') {
+        document.getElementById('pipe-run-badge').textContent = 'COMPLETED';
+        toast('Pipeline completed: ' + (d.decision || ''));
+        sseSource.close(); sseSource = null;
+        loadArtifacts();
+        loadHealth();
+        loadChainSummary();
+      }
+      if (d.type === 'error') {
+        document.getElementById('pipe-run-badge').textContent = 'ERROR';
+        toast('Pipeline error: ' + (d.message || '').slice(0,60), 'err');
+        sseSource.close(); sseSource = null;
+      }
+    } catch(e) {}
+  };
+  sseSource.onerror = () => {
+    if (sseSource) { sseSource.close(); sseSource = null; }
+  };
+}
+
+async function loadArtifacts() {
+  const el = document.getElementById('artifacts-body');
+  el.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Loading...</div>';
+  try {
+    const d = await apiFetch('/api/crewai/artifacts');
+    if (!d.artifacts || !d.artifacts.length) {
+      el.innerHTML = '<div class="loading-placeholder">No artifacts yet</div>';
+      return;
+    }
+    el.innerHTML = `<table>
+      <thead><tr><th>Name</th><th>Size</th><th>Modified</th><th>Action</th></tr></thead>
+      <tbody>${d.artifacts.map(a => `
+        <tr>
+          <td style="font-family:var(--mono);font-size:.78rem">${esc(a.name)}</td>
+          <td>${fmtBytes(a.size)}</td>
+          <td style="font-size:.75rem;color:var(--text3)">${a.modified ? new Date(a.modified).toLocaleString() : ''}</td>
+          <td><button class="btn btn-sm btn-outline" onclick="viewArtifact('${esc(a.name)}')">View</button></td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  } catch(e) {
+    el.innerHTML = '<div class="loading-placeholder">Failed to load</div>';
+  }
+}
+
+async function viewArtifact(name) {
+  try {
+    const d = await apiFetch('/api/crewai/artifacts/' + encodeURIComponent(name));
+    const content = typeof d === 'object' ? JSON.stringify(d, null, 2) : d;
+    const win = window.open('', '_blank');
+    win.document.write(`<html><head><title>${name}</title><style>body{background:#0a0a0a;color:#e8e8e8;font-family:'JetBrains Mono',monospace;font-size:13px;padding:20px;white-space:pre-wrap;word-wrap:break-word}</style></head><body>${esc(content)}</body></html>`);
+  } catch(e) { toast('Failed to load artifact', 'err'); }
+}
+
+// ─── Document Center ───────────────────────────────
+async function loadDocuments() {
+  const certEl = document.getElementById('cert-body');
+  const dvrEl = document.getElementById('dvr-body');
+  certEl.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Loading...</div>';
+  dvrEl.innerHTML = '';
+  try {
+    const d = await apiFetch('/api/crewai/artifacts');
+    const all = d.artifacts || [];
+    const certs = all.filter(a => a.name.toLowerCase().includes('certificate') || a.name.toLowerCase().includes('cert'));
+    const dvrs = all.filter(a => a.name.toLowerCase().startsWith('dvr') || a.name.toLowerCase().includes('victim'));
+    const others = all.filter(a => !certs.includes(a) && !dvrs.includes(a));
+
+    certEl.innerHTML = certs.length ? buildDocTable(certs) : '<div class="loading-placeholder">No certificates found</div>';
+    dvrEl.innerHTML = dvrs.length ? buildDocTable(dvrs) : '<div class="loading-placeholder">No DVR reports found</div>';
+  } catch(e) {
+    certEl.innerHTML = '<div class="loading-placeholder">Failed to load</div>';
+  }
+}
+
+function buildDocTable(items) {
+  return `<table>
+    <thead><tr><th>Document</th><th>Size</th><th>Modified</th><th>Actions</th></tr></thead>
+    <tbody>${items.map(a => `
+      <tr>
+        <td style="font-family:var(--mono);font-size:.78rem">${esc(a.name)}</td>
+        <td>${fmtBytes(a.size)}</td>
+        <td style="font-size:.75rem;color:var(--text3)">${a.modified ? new Date(a.modified).toLocaleString() : ''}</td>
+        <td><button class="btn btn-sm btn-outline" onclick="viewArtifact('${esc(a.name)}')">View</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ─── Emergency Controls ────────────────────────────
+async function refreshEmergency() {
+  try {
+    const [em, boot] = await Promise.all([
+      apiFetch('/api/admin/emergency-status'),
+      apiFetch('/api/admin/boot-status'),
+    ]);
+    const dot = document.getElementById('em-dot');
+    const txt = document.getElementById('em-status-text');
+    if (em.emergency_stopped) {
+      dot.className = 'status-dot red';
+      txt.textContent = 'EMERGENCY STOP ACTIVE';
+      txt.style.color = 'var(--red)';
+    } else {
+      dot.className = 'status-dot green';
+      txt.textContent = 'System Operational';
+      txt.style.color = 'var(--accent)';
+    }
+    const bootEl = document.getElementById('em-boot-detail');
+    bootEl.innerHTML = `
+      <div class="status-row"><div class="status-dot ${boot.boot_locked ? 'red' : 'green'}"></div><span>Boot Lock: <strong>${boot.boot_locked ? 'LOCKED' : 'OK'}</strong></span></div>
+      <div class="status-row"><div class="status-dot ${boot.status === 'PASS' ? 'green' : 'red'}"></div><span>Boot Status: <strong>${boot.status || '—'}</strong></span></div>
+      ${boot.genesis_hash ? `<div style="margin-top:8px;font-size:.75rem;color:var(--text3)">Genesis: <span class="hash">${boot.genesis_hash.slice(0,32)}...</span></div>` : ''}`;
+  } catch(e) {
+    toast('Failed to load emergency status', 'err');
+  }
+}
+
+async function emergencyStop() {
+  if (!confirm('⚠️ EMERGENCY STOP — Are you sure? This will halt all pipeline operations.')) return;
+  try {
+    await apiFetch('/api/admin/emergency-stop', { method: 'POST', body: { reason: 'Admin panel manual stop' } });
+    toast('Emergency stop activated', 'err');
+    refreshEmergency();
+    loadHealth();
+  } catch(e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+}
+
+async function bootRegenerate() {
+  const el = document.getElementById('em-regen-result');
+  el.innerHTML = '<span class="spinner"></span> Regenerating...';
+  try {
+    const d = await apiFetch('/api/admin/boot-regenerate', { method: 'POST' });
+    el.innerHTML = `<span style="color:var(--accent)">✓ Genesis regenerated</span>`;
+    toast('Genesis regenerated');
+    refreshEmergency();
+    loadHealth();
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">✗ Failed: ${e.message}</span>`;
+  }
+}
+
+// ─── WitnessChain Viewer ───────────────────────────
+async function loadWitnessChain() {
+  const summaryEl = document.getElementById('witness-summary');
+  const tableEl = document.getElementById('witness-table-wrap');
+  summaryEl.innerHTML = '<div class="loading-placeholder"><span class="spinner"></span> Loading...</div>';
+  tableEl.innerHTML = '';
+  try {
+    const d = await apiFetch('/api/crewai/trust-chain');
+    if (d.status === 'no_chain') {
+      summaryEl.innerHTML = '<div class="loading-placeholder">No witness chain available — run a pipeline first</div>';
+      return;
+    }
+    summaryEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">Chain Hash</div>
+          <div class="hash" style="word-break:break-all">${d.chain_hash || '—'}</div>
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">Ledger Seal</div>
+          <div class="hash" style="word-break:break-all">${d.ledger_seal || '—'}</div>
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">Status</div>
+          <div style="font-size:1.2rem;font-weight:700;color:${d.verified ? 'var(--accent)' : 'var(--red)'}">${d.verified ? '✓ VERIFIED' : '✗ INVALID'}</div>
+          <div style="font-size:.72rem;color:var(--text3)">${d.entries_count} entries | Decision: <strong class="decision-${d.final_decision}">${d.final_decision || '—'}</strong></div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:8px 12px;background:var(--bg);border-radius:6px;display:flex;gap:24px;font-size:.72rem;color:var(--text3)">
+        <span>📜 Art. 13: ${d.eu_ai_act?.article_13 || '—'}</span>
+        <span>📋 Art. 17: ${d.eu_ai_act?.article_17 || '—'}</span>
+      </div>`;
+
+    // Entries table
+    const entries = d.entries || [];
+    if (entries.length) {
+      const actionColors = { PIPELINE_START: 'var(--blue)', EVALUATE: 'var(--text)', JUDGE: 'var(--yellow)', BUILD: 'var(--accent)', SEAL: 'var(--red)' };
+      tableEl.innerHTML = `<table>
+        <thead><tr><th>Seq</th><th>Agent</th><th>Action</th><th>Evidence Hash</th><th>Entry Hash</th><th>Timestamp</th></tr></thead>
+        <tbody>${entries.map(e => `
+          <tr>
+            <td style="font-weight:600;color:var(--accent)">${e.sequence}</td>
+            <td style="font-family:var(--mono);font-size:.75rem">${esc(e.agent_id)}</td>
+            <td><span style="color:${actionColors[e.action] || 'var(--text2)'}; font-weight:600;font-size:.78rem">${e.action}</span></td>
+            <td class="hash">${(e.evidence_hash||'').slice(0,20)}...</td>
+            <td class="hash">${(e.entry_hash||'').slice(0,20)}...</td>
+            <td style="font-size:.72rem;color:var(--text3)">${e.timestamp || ''}</td>
+          </tr>`).join('')}
+        </tbody></table>`;
+    }
+
+    // Auto-fill verify input
+    document.getElementById('verify-hash-input').value = d.chain_hash || '';
+  } catch(e) {
+    summaryEl.innerHTML = '<div class="loading-placeholder">Failed to load chain</div>';
+  }
+}
+
+async function verifySeal() {
+  const hashInput = document.getElementById('verify-hash-input').value.trim();
+  if (!hashInput) { toast('Enter a chain hash', 'err'); return; }
+  const result = document.getElementById('verify-result');
+  result.style.display = 'none';
+  try {
+    const d = await apiFetch('/api/crewai/verify-seal/' + encodeURIComponent(hashInput));
+    result.style.display = 'block';
+    if (d.verdict === 'VALID') {
+      result.className = 'verify-result valid';
+      result.innerHTML = `✓ VALID — Chain verified<br>Entries: ${d.entries_count} | Match: ${d.match}`;
+    } else {
+      result.className = 'verify-result invalid';
+      result.innerHTML = `✗ INVALID — Hash mismatch<br>Query: ${hashInput.slice(0,32)}...<br>Stored: ${(d.stored_hash||'').slice(0,32)}...`;
+    }
+  } catch(e) {
+    result.style.display = 'block';
+    result.className = 'verify-result invalid';
+    result.innerHTML = '✗ Verification failed: ' + e.message;
+  }
+}
+
+// ─── Utilities ─────────────────────────────────────
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+</script>
+</body>
+</html>
