@@ -211,6 +211,37 @@ server {
         proxy_read_timeout 30s;
     }
 
+    # ─── CrewAI SSE Stream (buffering OFF) ─────────────────────
+    location /api/crewai/stream {
+        proxy_pass http://127.0.0.1:8000/api/crewai/stream;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding on;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        add_header Cache-Control "no-cache, no-transform" always;
+        add_header X-Accel-Buffering "no" always;
+    }
+
+    # ─── CrewAI Pipeline API ─────────────────────────────────
+    location /api/crewai/ {
+        proxy_pass http://127.0.0.1:8000/api/crewai/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 300s;
+        limit_req zone=yaruksai_limit burst=10 nodelay;
+    }
+
     # ─── TS Engine API (7AI Council) — CATCH-ALL ─────────────
     location /api/ {
         proxy_pass http://127.0.0.1:3000/api/;
